@@ -32,7 +32,7 @@ class ShowAccount(TunedModel):
     name: str
     balance: float = Field(.0, ge=0, lt=10**10)
     currency: ShowCurrency
-    timestamp: datetime
+    created_at: datetime
 
 
 class AccountCreate(BaseModel):
@@ -40,7 +40,7 @@ class AccountCreate(BaseModel):
     name: str
     balance: float = Field(.0, ge=0, lt=10**10)
     currency_id: int
-    timestamp: datetime
+    created_at: datetime
 
 
 class ShowTransactionType(TunedModel):
@@ -83,7 +83,7 @@ class ShowTransaction(TunedModel):
     created_at: datetime
 
 
-class CreateTransaction(BaseModel):
+class TransactionCreate(BaseModel):
     transaction_type_id: int
     amount: float = Field(.0, ge=0, lt=10**10)
     tag_id: uuid.UUID
