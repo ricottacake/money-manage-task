@@ -30,7 +30,7 @@ class Account(Base):
     name = Column(String, nullable=False)
     balance = Column(Float, nullable=False, default=.0)
     currency_id = Column(Integer, ForeignKey("currency.id"), nullable=False)
-    updated_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
 
 
 class Credit(Base):
