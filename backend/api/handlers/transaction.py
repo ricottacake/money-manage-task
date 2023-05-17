@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, \
     UpdateTransactionRequest, UpdatedTransactionResponse, DeletedTransactionResponse, \
-    ShowTransactionType
+    ShowTransactionType, CreatedTransactionResponse
 from backend.db.dals import TransactionDAL, TransactionTypeDAL, AccountDAL
 from backend.db.session import get_db
 
@@ -122,7 +122,7 @@ async def _delete_transaction(transaction_id: uuid.UUID, db) -> uuid.UUID | None
 @router.post("/")
 async def create_transaction(
         body: TransactionCreate, db: AsyncSession = Depends(get_db)
-) -> uuid.UUID:
+) -> CreatedTransactionResponse:
     created_transaction_id = await _create_new_transaction(body, db)
 
     if created_transaction_id is None:
@@ -130,7 +130,7 @@ async def create_transaction(
             status_code=404,
             detail=f"Not found Transaction or Tag or Account by id"
         )
-    return created_transaction_id
+    return CreatedTransactionResponse(created_transaction_id=created_transaction_id)
 
 
 @router.get("/", response_model=ShowTransaction)

@@ -22,6 +22,10 @@ class AccountCreate(BaseModel):
     created_at: datetime
 
 
+class CreatedAccountResponse(BaseModel):
+    created_account_id: uuid.UUID
+
+
 class UpdateAccountRequest(BaseModel):
     name: str | None
     balance: float | None

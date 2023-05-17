@@ -186,7 +186,7 @@ class CurrencyDAL(BaseDAL):
 
 
 class TagDAL(BaseDAL):
-    async def create_tag(self, name: uuid.UUID) -> Tag:
+    async def create_tag(self, name: str) -> Tag:
         new_tag = Tag(name=name)
         self.db_session.add(new_tag)
         await self.db_session.flush()

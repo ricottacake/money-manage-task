@@ -69,8 +69,6 @@ def _db_pre_session():
             db_session.flush()
             db_session.commit()
 
-        print("This run here")
-
 
 async def get_db() -> Generator:
     try:
