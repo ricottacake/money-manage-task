@@ -1,6 +1,7 @@
 import uuid
+from typing import Sequence
 
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import select, update, delete, and_, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import Transaction, Account, TransactionType, Currency, Tag, Deposit, Credit
@@ -80,6 +81,15 @@ class TransactionDAL(BaseDAL):
         if delete_transaction_id_row is not None:
             return delete_transaction_id_row[0]
 
+    async def get_transactions(
+            self, account_id, transaction_type_id: int | None = None
+    ) -> Sequence[Row] | None:
+        query = select(Transaction).where(Transaction.account_id == account_id)
+        if transaction_type_id is not None:
+            query = query.filter(Transaction.transaction_type_id == transaction_type_id)
+        query_result = await self.db_session.execute(query)
+        return query_result.fetchall()
+
 
 class AccountDAL(BaseDAL):
     async def create_account(self, name: str, balance: float, currency_id: int) -> Account:
@@ -135,6 +145,14 @@ class AccountDAL(BaseDAL):
         account_row = query_result.fetchone()
         if account_row is not None:
             return account_row[0]
+
+    async def get_account_transactions(
+            self, account_id: uuid.UUID, transaction_type_id: int | None = None
+    ) -> Sequence[Row] | None:
+        transaction_dal = TransactionDAL(self.db_session)
+        return await transaction_dal.get_transactions(
+            account_id=account_id, transaction_type_id=transaction_type_id
+        )
 
 
 class TransactionTypeDAL(BaseDAL):
