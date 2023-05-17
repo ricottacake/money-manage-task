@@ -39,7 +39,7 @@ async def _create_new_transfer(body: TransferCreate, db) -> CreatedTransferRespo
 
             currency_to = await currency_dal.get_currency_by_id(account_to.currency_id)
 
-            if currency_to is None or currency_from.name == currency_to.name:
+            if currency_to is None:
                 return
 
             response = requests.get(
@@ -83,6 +83,6 @@ async def create_transfer(
     if created_transfer_response is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Not found Account by id"
+            # detail=f"Not found Account by id"
         )
     return created_transfer_response
