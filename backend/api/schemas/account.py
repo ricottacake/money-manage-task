@@ -9,7 +9,7 @@ from backend.api.schemas import BaseModel, TunedModel
 class ShowAccount(TunedModel):
     id: uuid.UUID
     name: str
-    balance: float = Field(.0, ge=0, lt=10**10)
+    balance: float
     currency_id: int
     created_at: datetime
 

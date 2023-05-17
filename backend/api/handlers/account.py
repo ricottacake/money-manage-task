@@ -1,11 +1,13 @@
 import uuid
+from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.account import AccountCreate, ShowAccount, \
     UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse
-from backend.db.dals import AccountDAL
+from backend.api.schemas.transaction import ShowTransaction
+from backend.db.dals import AccountDAL, TransactionTypeDAL
 from backend.db.session import get_db
 
 
@@ -68,6 +70,37 @@ async def _delete_account(account_id: uuid.UUID, db) -> uuid.UUID | None:
                 account_id=account_id,
             )
             return deleted_account_id
+
+
+async def _get_account_transactions(account_id: uuid.UUID, db, transaction_type_id: int | None = None) -> Sequence[ShowTransaction] | None:
+    async with db as session:
+        async with session.begin():
+            account_dal = AccountDAL(session)
+
+            if await account_dal.get_account_by_id(account_id=account_id) is None:
+                return
+
+            if transaction_type_id is not None:
+                transaction_type_dal = TransactionTypeDAL(session)
+                transaction_type = await transaction_type_dal.get_transaction_type_by_id(
+                    transaction_type_id
+                )
+                if transaction_type is None:
+                    return
+
+            account_transactions = await account_dal.get_account_transactions(
+                account_id=account_id,
+                transaction_type_id=transaction_type_id
+            )
+
+            return tuple(ShowTransaction(
+                id=transaction.id,
+                transaction_type_id=transaction.transaction_type_id,
+                amount=transaction.amount,
+                tag_id=transaction.tag_id,
+                account_id=transaction.account_id,
+                created_at=transaction.created_at
+            ) for transaction, *_ in account_transactions)
 
 
 @router.post("/")
@@ -134,3 +167,23 @@ async def delete_account(
         )
 
     return DeletedAccountResponse(deleted_account_id=deleted_account_id)
+
+
+@router.get("/transactions", response_model=Sequence[ShowTransaction])
+async def get_account_transactions(
+        account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+        transaction_type_id: int | None = None
+) -> Sequence[ShowTransaction]:
+    account_transactions = await _get_account_transactions(
+        account_id=account_id,
+        db=db,
+        transaction_type_id=transaction_type_id
+    )
+
+    if account_transactions is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Account or TransactionType id not found."
+        )
+
+    return account_transactions

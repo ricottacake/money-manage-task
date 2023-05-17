@@ -1,6 +1,7 @@
 import uuid
+from typing import Sequence
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import Transaction, Account, TransactionType, Currency, Tag, Deposit, Credit
@@ -19,7 +20,7 @@ class TransactionDAL(BaseDAL):
             amount: float,
             account_id: uuid.UUID,
             tag_id: uuid.UUID | None = None
-    ) -> Transaction:
+    ) -> Transaction | None:
 
         new_transaction = Transaction(
             transaction_type_id=transaction_type_id,
@@ -27,6 +28,28 @@ class TransactionDAL(BaseDAL):
             account_id=account_id,
             tag_id=tag_id
         )
+
+        tag_dal = TagDAL(self.db_session)
+
+        if await tag_dal.get_tag_by_id(tag_id) is None:
+            return
+
+        transaction_type_dal = TransactionTypeDAL(self.db_session)
+        is_positive_transaction = await transaction_type_dal.is_positive_transaction(
+            transaction_type_id=transaction_type_id
+        )
+
+        if is_positive_transaction is None:
+            return
+
+        # if it is income -> add, expense -> subtract
+        sign = 2*is_positive_transaction - 1
+
+        account_dal = AccountDAL(self.db_session)
+        updated_account_id = await account_dal.add_to_balance(account_id, amount=amount*sign)
+
+        if updated_account_id is None:
+            return
 
         self.db_session.add(new_transaction)
         await self.db_session.flush()
@@ -57,6 +80,15 @@ class TransactionDAL(BaseDAL):
 
         if delete_transaction_id_row is not None:
             return delete_transaction_id_row[0]
+
+    async def get_transactions(
+            self, account_id, transaction_type_id: int | None = None
+    ) -> Sequence[Row] | None:
+        query = select(Transaction).where(Transaction.account_id == account_id)
+        if transaction_type_id is not None:
+            query = query.filter(Transaction.transaction_type_id == transaction_type_id)
+        query_result = await self.db_session.execute(query)
+        return query_result.fetchall()
 
 
 class AccountDAL(BaseDAL):
@@ -97,6 +129,31 @@ class AccountDAL(BaseDAL):
         if delete_account_id_row is not None:
             return delete_account_id_row[0]
 
+    async def add_to_balance(self, account_id: uuid.UUID, amount: float) -> uuid.UUID | None:
+        query = select(Account) \
+            .where(Account.id == account_id)
+
+        query_result = await self.db_session.execute(query)
+        balance = query_result.fetchone()[0].balance
+
+        query = update(Account)\
+            .where(Account.id == account_id)\
+            .values(balance=balance+amount)\
+            .returning(Account.id)
+
+        query_result = await self.db_session.execute(query)
+        account_row = query_result.fetchone()
+        if account_row is not None:
+            return account_row[0]
+
+    async def get_account_transactions(
+            self, account_id: uuid.UUID, transaction_type_id: int | None = None
+    ) -> Sequence[Row] | None:
+        transaction_dal = TransactionDAL(self.db_session)
+        return await transaction_dal.get_transactions(
+            account_id=account_id, transaction_type_id=transaction_type_id
+        )
+
 
 class TransactionTypeDAL(BaseDAL):
     async def get_transaction_type_by_id(self, transaction_type_id: int) -> TransactionType | None:
@@ -105,6 +162,13 @@ class TransactionTypeDAL(BaseDAL):
         transaction_type_row = query_result.fetchone()
         if transaction_type_row is not None:
             return transaction_type_row[0]
+
+    async def is_positive_transaction(self, transaction_type_id: int) -> bool | None:
+        query = select(TransactionType).where(TransactionType.id == transaction_type_id)
+        query_result = await self.db_session.execute(query)
+        transaction_type_row = query_result.fetchone()
+        if transaction_type_row is not None:
+            return transaction_type_row[0].name in ("income", "money_transfer_receiver")
 
 
 class CurrencyDAL(BaseDAL):

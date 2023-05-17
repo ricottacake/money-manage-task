@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-async def _create_new_transaction(body: TransactionCreate, db) -> uuid.UUID:
+async def _create_new_transaction(body: TransactionCreate, db) -> uuid.UUID | None:
     async with db as session:
         async with session.begin():
             transaction_dal = TransactionDAL(session)
@@ -27,7 +27,8 @@ async def _create_new_transaction(body: TransactionCreate, db) -> uuid.UUID:
                 tag_id=body.tag_id
             )
 
-            return transaction.id
+            if transaction is not None:
+                return transaction.id
 
 
 async def _get_transaction_by_id(transaction_id: uuid.UUID, db) -> ShowTransaction | None:
@@ -93,7 +94,14 @@ async def _delete_transaction(transaction_id: uuid.UUID, db) -> uuid.UUID | None
 async def create_transaction(
         body: TransactionCreate, db: AsyncSession = Depends(get_db)
 ) -> uuid.UUID:
-    return await _create_new_transaction(body, db)
+    created_transaction_id = await _create_new_transaction(body, db)
+
+    if created_transaction_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Not found Transaction or Tag or Account by id"
+        )
+    return created_transaction_id
 
 
 @router.get("/", response_model=ShowTransaction)
