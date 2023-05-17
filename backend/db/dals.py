@@ -207,6 +207,11 @@ class TagDAL(BaseDAL):
         query = select(Tag).where(Tag.id == tag_id)
         await self.db_session.delete(query)
 
+    async def get_tags(self) -> Sequence[Tag]:
+        query = select(Tag)
+        query_result = await self.db_session.execute(query)
+        return tuple(map(lambda row: row[0], query_result.fetchall()))
+
 
 class DepositDAL(BaseDAL):
     async def create_deposit(
