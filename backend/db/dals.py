@@ -1,4 +1,3 @@
-import bdb
 import uuid
 from typing import Sequence
 
@@ -9,6 +8,9 @@ from backend.db.models import Transaction, Account, TransactionType, Currency, T
 
 
 # DAL - Data Access Layer
+from backend.db.session import TRANSACTION_TYPE_DATA
+
+
 class BaseDAL:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
@@ -163,7 +165,10 @@ class TransactionTypeDAL(BaseDAL):
         query_result = await self.db_session.execute(query)
         transaction_type_row = query_result.fetchone()
         if transaction_type_row is not None:
-            return transaction_type_row[0].name in ("income", "money_transfer_receiver")
+
+            return transaction_type_row[0].name in (
+                TRANSACTION_TYPE_DATA[0]["name"], TRANSACTION_TYPE_DATA[2]["name"]
+            )
 
 
 class CurrencyDAL(BaseDAL):
