@@ -88,9 +88,12 @@ class TransactionDAL(BaseDAL):
             return delete_transaction_id_row[0]
 
     async def get_transactions(
-            self, account_id, transaction_type_id: int | None = None
+            self, account_id: uuid.UUID | None = None,
+            transaction_type_id: int | None = None
     ) -> Sequence[Transaction] | None:
-        query = select(Transaction).where(Transaction.account_id == account_id)
+        query = select(Transaction)
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
         if transaction_type_id is not None:
             query = query.filter(Transaction.transaction_type_id == transaction_type_id)
         query_result = await self.db_session.execute(query)

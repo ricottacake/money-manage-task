@@ -169,7 +169,7 @@ async def delete_account(
     return DeletedAccountResponse(deleted_account_id=deleted_account_id)
 
 
-@router.get("/transactions")
+@router.get("/transactions/")
 async def get_account_transactions(
         account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
         transaction_type_id: int | None = None
