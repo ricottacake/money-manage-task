@@ -10,14 +10,25 @@ import { plus } from '../../utils/Icons';
 function Form() {
     const {addIncome, getIncomes, error, setError} = useGlobalContext()
     const [inputState, setInputState] = useState({
-        title: '',
         amount: '',
-        date: '',
-        category: '',
-        description: '',
+        tag: '',
+        account: ''
     })
+    const [accountData, setAccountData] = useState([]);
+    const { tag, account, amount } = inputState;
 
-    const { title, amount, date, category,description } = inputState;
+    useEffect(() => {
+        
+        axios.get('/api/data')
+          .then(response => {
+            // Обработка успешного ответа
+            setData(response.data);
+          })
+          .catch(error => {
+            // Обработка ошибки
+            console.error(error);
+          });
+      }, []);
 
     const handleInput = name => e => {
         setInputState({...inputState, [name]: e.target.value})
@@ -27,11 +38,20 @@ function Form() {
     const handleSubmit = e => {
 
         e.preventDefault()
+
+        /*axios.post('/api/submit-form', inputState)
+            .then(response => {
+
+      })
+      .catch(error => {
+
+      });*/
+
         addIncome(inputState)
         setInputState({
             amount: '',
-            date: '',
-            category: ''
+            tag: '',
+            account: ''
         })
     }
 
@@ -39,28 +59,8 @@ function Form() {
         <FormStyled onSubmit={handleSubmit}>
             {error && <p className='error'>{error}</p>}
 
-            <div className="input-control">
-                <input value={amount}  
-                    type="text" 
-                    name={'amount'} 
-                    placeholder={'Salary Amount'}
-                    onChange={handleInput('amount')} 
-                />
-            </div>
-            <div className="input-control">
-
-                <DatePicker 
-                    id='date'
-                    placeholderText='Enter A Date'
-                    selected={date}
-                    dateFormat="dd/MM/yyyy"
-                    onChange={(date) => {
-                        setInputState({...inputState, date: date})
-                    }}
-                />
-            </div>
             <div className="selects input-control">
-                <select required value={category} name="category" id="category" onChange={handleInput('category')}>
+                <select required value={tag} name="tag" id="tag" onChange={handleInput('tag')}>
                     <option value=""  disabled >Select Option</option>
                     <option value="salary">Salary</option>
                     <option value="freelancing">Freelancing</option>
@@ -71,6 +71,24 @@ function Form() {
                     <option value="youtube">Youtube</option>  
                     <option value="other">Other</option>  
                 </select>
+            </div>
+
+            <div className="selects input-control">
+                <select required value={account} name="account" id="account" onChange={handleInput('account')}>
+                    <option value=""  disabled >Select Option</option> 
+                    <option value="USD">UAH</option>  
+                    <option value="UAH">USD</option>  
+                </select>
+            </div>
+          
+
+            <div className="input-control">
+                <input value={amount}  
+                    type="text" 
+                    name={'amount'} 
+                    placeholder={'Salary Amount'}
+                    onChange={handleInput('amount')} 
+                />
             </div>
 
             <div className="submit-btn">
