@@ -1,3 +1,4 @@
+import bdb
 import uuid
 from typing import Sequence
 
@@ -11,6 +12,13 @@ from backend.db.models import Transaction, Account, TransactionType, Currency, T
 class BaseDAL:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
+
+
+class UserDAL(BaseDAL):
+    async def get_accounts(self) -> Sequence[Account] | None:
+        query = select(Account)
+        query_result = await self.db_session.execute(query)
+        return tuple(map(lambda row: row[0], query_result.fetchall()))
 
 
 class TransactionDAL(BaseDAL):
@@ -56,11 +64,7 @@ class TransactionDAL(BaseDAL):
         return new_transaction
 
     async def get_transaction_by_id(self, transaction_id: uuid.UUID) -> Transaction | None:
-        query = select(Transaction).where(Transaction.id == transaction_id)
-        query_result = await self.db_session.execute(query)
-        transaction_row = query_result.fetchone()
-        if transaction_row is not None:
-            return transaction_row[0]
+        return await self.db_session.get(Transaction, transaction_id)
 
     async def update_transaction(self, transaction_id: uuid.UUID, **kwargs) -> Transaction | None:
         query = update(Transaction)\
@@ -83,12 +87,12 @@ class TransactionDAL(BaseDAL):
 
     async def get_transactions(
             self, account_id, transaction_type_id: int | None = None
-    ) -> Sequence[Row] | None:
+    ) -> Sequence[Transaction] | None:
         query = select(Transaction).where(Transaction.account_id == account_id)
         if transaction_type_id is not None:
             query = query.filter(Transaction.transaction_type_id == transaction_type_id)
         query_result = await self.db_session.execute(query)
-        return query_result.fetchall()
+        return tuple(map(lambda row: row[0], query_result.fetchall()))
 
 
 class AccountDAL(BaseDAL):
@@ -104,11 +108,7 @@ class AccountDAL(BaseDAL):
         return new_account
 
     async def get_account_by_id(self, account_id: uuid.UUID) -> Account | None:
-        query = select(Account).where(Account.id == account_id)
-        query_result = await self.db_session.execute(query)
-        account_row = query_result.fetchone()
-        if account_row is not None:
-            return account_row[0]
+        return await self.db_session.get(Account, account_id)
 
     async def update_account(self, account_id: uuid.UUID, **kwargs) -> Account | None:
         query = update(Account) \
@@ -130,16 +130,15 @@ class AccountDAL(BaseDAL):
             return delete_account_id_row[0]
 
     async def add_to_balance(self, account_id: uuid.UUID, amount: float) -> uuid.UUID | None:
-        query = select(Account) \
-            .where(Account.id == account_id)
-
+        query = select(Account.balance).where(Account.id == account_id)
         query_result = await self.db_session.execute(query)
-        balance = query_result.fetchone()[0].balance
+        balance = query_result.scalar_one()
 
         query = update(Account)\
             .where(Account.id == account_id)\
-            .values(balance=balance+amount)\
-            .returning(Account.id)
+            .values(
+                balance=balance+amount
+            ).returning(Account.id)
 
         query_result = await self.db_session.execute(query)
         account_row = query_result.fetchone()
@@ -148,7 +147,7 @@ class AccountDAL(BaseDAL):
 
     async def get_account_transactions(
             self, account_id: uuid.UUID, transaction_type_id: int | None = None
-    ) -> Sequence[Row] | None:
+    ) -> Sequence[Transaction] | None:
         transaction_dal = TransactionDAL(self.db_session)
         return await transaction_dal.get_transactions(
             account_id=account_id, transaction_type_id=transaction_type_id
@@ -157,11 +156,7 @@ class AccountDAL(BaseDAL):
 
 class TransactionTypeDAL(BaseDAL):
     async def get_transaction_type_by_id(self, transaction_type_id: int) -> TransactionType | None:
-        query = select(TransactionType).where(TransactionType.id == transaction_type_id)
-        query_result = await self.db_session.execute(query)
-        transaction_type_row = query_result.fetchone()
-        if transaction_type_row is not None:
-            return transaction_type_row[0]
+        return await self.db_session.get(TransactionType, transaction_type_id)
 
     async def is_positive_transaction(self, transaction_type_id: int) -> bool | None:
         query = select(TransactionType).where(TransactionType.id == transaction_type_id)
@@ -179,11 +174,7 @@ class CurrencyDAL(BaseDAL):
         return new_currency
 
     async def get_currency_by_id(self, currency_id: uuid.UUID) -> Currency | None:
-        query = select(Currency).where(Currency.id == currency_id)
-        query_result = await self.db_session.execute(query)
-        currency_row = query_result.fetchone()
-        if currency_row is not None:
-            return currency_row[0]
+        return await self.db_session.get(Currency, currency_id)
 
 
 class TagDAL(BaseDAL):
@@ -194,11 +185,7 @@ class TagDAL(BaseDAL):
         return new_tag
 
     async def get_tag_by_id(self, tag_id: uuid.UUID) -> Tag | None:
-        query = select(Tag).where(Tag.id == tag_id)
-        query_result = await self.db_session.execute(query)
-        transaction_row = query_result.fetchone()
-        if transaction_row is not None:
-            return transaction_row[0]
+        return await self.db_session.get(Tag, tag_id)
 
     async def update_tag(self, tag_id: uuid.UUID, name: str) -> Tag | None:
         query = update(Tag) \
@@ -230,11 +217,7 @@ class DepositDAL(BaseDAL):
         return new_deposit
 
     async def get_deposit_by_id(self, deposit_id: uuid.UUID) -> Deposit | None:
-        query = select(Deposit).where(Deposit.id == deposit_id)
-        query_result = await self.db_session.execute(query)
-        deposit_row = query_result.fetchone()
-        if deposit_row is not None:
-            return deposit_row[0]
+        return await self.db_session.get(Deposit, deposit_id)
 
     async def update_deposit(self, deposit_id: uuid.UUID, **kwargs) -> Deposit | None:
         query = update(Deposit) \
@@ -253,7 +236,7 @@ class DepositDAL(BaseDAL):
 
 
 class CreditDAL(BaseDAL):
-    async def create_deposit(
+    async def create_credit(
             self, name: uuid.UUID, amount: float, account_id: uuid.UUID
     ) -> Credit:
         new_credit = Credit(
@@ -265,14 +248,10 @@ class CreditDAL(BaseDAL):
         await self.db_session.flush()
         return new_credit
 
-    async def get_deposit_by_id(self, credit_id: uuid.UUID) -> Credit | None:
-        query = select(Credit).where(Credit.id == credit_id)
-        query_result = await self.db_session.execute(query)
-        credit_row = query_result.fetchone()
-        if credit_row is not None:
-            return credit_row[0]
+    async def get_credit_by_id(self, credit_id: uuid.UUID) -> Credit | None:
+        return await self.db_session.get(Credit, credit_id)
 
-    async def update_deposit(self, credit_id: uuid.UUID, **kwargs) -> Credit | None:
+    async def update_credit(self, credit_id: uuid.UUID, **kwargs) -> Credit | None:
         query = update(Credit) \
             .where(Credit.id == credit_id) \
             .values(**kwargs) \
@@ -283,6 +262,6 @@ class CreditDAL(BaseDAL):
         if update_credit_id_row is not None:
             return update_credit_id_row[0]
 
-    async def delete_deposit(self, credit_id: uuid.UUID) -> None:
+    async def delete_credit(self, credit_id: uuid.UUID) -> None:
         query = select(Credit).where(Credit.id == credit_id)
         await self.db_session.delete(query)

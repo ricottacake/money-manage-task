@@ -100,7 +100,7 @@ async def _get_account_transactions(account_id: uuid.UUID, db, transaction_type_
                 tag_id=transaction.tag_id,
                 account_id=transaction.account_id,
                 created_at=transaction.created_at
-            ) for transaction, *_ in account_transactions)
+            ) for transaction in account_transactions)
 
 
 @router.post("/")
@@ -169,7 +169,7 @@ async def delete_account(
     return DeletedAccountResponse(deleted_account_id=deleted_account_id)
 
 
-@router.get("/transactions", response_model=Sequence[ShowTransaction])
+@router.get("/transactions")
 async def get_account_transactions(
         account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
         transaction_type_id: int | None = None
