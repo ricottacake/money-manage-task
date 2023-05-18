@@ -1,13 +1,19 @@
+import asyncio
 import uuid
 from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.api.handlers.account import _get_account_by_id
+from backend.api.handlers.tag import _get_tag_by_id
+from backend.api.schemas.account import ShowAccount
+from backend.api.schemas.currency import ShowCurrency
+from backend.api.schemas.tag import ShowTag
 from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, \
     UpdateTransactionRequest, UpdatedTransactionResponse, DeletedTransactionResponse, \
     ShowTransactionType, CreatedTransactionResponse
-from backend.db.dals import TransactionDAL
+from backend.db.dals import TransactionDAL, AccountDAL, TagDAL, CurrencyDAL
 from backend.db.session import get_db, TransactionTypeEnum
 from backend.exception import TransactionNotFound, TransactionTypeNotFound, TagNotFound, \
     AccountNotFound
@@ -43,12 +49,32 @@ async def _get_transaction_by_id(transaction_id: uuid.UUID, db) -> ShowTransacti
                 transaction_id=transaction_id
             )
 
+            tag = await TagDAL(session).get_tag_by_id(transaction.tag_id)
+            account = await AccountDAL(session).get_account_by_id(transaction.account_id)
+            transaction_type_name = TransactionTypeEnum(transaction.transaction_type_id).name
+            currency = await CurrencyDAL(session).get_currency_by_id(account.currency_id)
+
             return ShowTransaction(
                 id=transaction.id,
-                transaction_type_id=transaction.transaction_type_id,
+                transaction_type=ShowTransactionType(
+                    id=transaction.transaction_type_id,
+                    name=transaction_type_name
+                ),
                 amount=transaction.amount,
-                tag_id=transaction.tag_id,
-                account_id=transaction.account_id,
+                tag=ShowTag(
+                    id=tag.id,
+                    name=tag.name
+                ),
+                account=ShowAccount(
+                    id=account.id,
+                    name=account.name,
+                    balance=account.balance,
+                    currency=ShowCurrency(
+                        id=currency.id,
+                        name=currency.name
+                    ),
+                    created_at=account.created_at
+                ),
                 created_at=transaction.created_at
             )
 
@@ -77,14 +103,29 @@ async def _get_transactions(
                 transaction_type_id=transaction_type_id, tag_id=tag_id
             )
 
-            return tuple(ShowTransaction(
-                id=transaction.id,
-                transaction_type_id=transaction.transaction_type_id,
-                amount=transaction.amount,
-                tag_id=transaction.tag_id,
-                account_id=transaction.account_id,
-                created_at=transaction.created_at
-            ) for transaction in transactions)
+        return tuple(ShowTransaction(
+            id=transaction.id,
+            transaction_type=ShowTransactionType(
+                id=transaction_type.id,
+                name=transaction_type.name
+            ),
+            amount=transaction.amount,
+            tag=ShowTag(
+                id=tag.id,
+                name=tag.name
+            ) if tag_id is not None else None,
+            account=ShowAccount(
+                id=account.id,
+                name=account.name,
+                balance=account.balance,
+                currency=ShowCurrency(
+                    id=currency.id,
+                    name=currency.name
+                ),
+                created_at=account.created_at
+            ),
+            created_at=transaction.created_at
+        ) for transaction, account, tag, transaction_type, currency in transactions)
 
 
 async def _update_transaction(
@@ -191,7 +232,7 @@ async def get_transactions(
         db: AsyncSession = Depends(get_db),
         transaction_type_id: int | None = None,
         tag_id: uuid.UUID | None = None
-) -> Sequence[ShowTransaction]:
+):
     try:
         transactions = await _get_transactions(
             db=db, transaction_type_id=transaction_type_id, tag_id=tag_id

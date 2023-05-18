@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.account import AccountCreate, ShowAccount, \
     UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse
-from backend.api.schemas.transaction import ShowTransaction
-from backend.db.dals import AccountDAL
+from backend.api.schemas.currency import ShowCurrency
+from backend.api.schemas.tag import ShowTag
+from backend.api.schemas.transaction import ShowTransaction, ShowTransactionType
+from backend.db.dals import AccountDAL, CurrencyDAL
 from backend.db.session import get_db
 from backend.exception import AccountNotFound, TransactionTypeNotFound
 
@@ -40,10 +42,17 @@ async def _get_account_by_id(account_id: uuid.UUID, db) -> ShowAccount:
                 account_id=account_id
             )
 
+            currency_dal = CurrencyDAL(session)
+
+            currency = await currency_dal.get_currency_by_id(account.currency_id)
+
             return ShowAccount(
                 id=account.id,
                 balance=account.balance,
-                currency_id=account.currency_id,
+                currency=ShowCurrency(
+                    id=currency.id,
+                    name=currency.name
+                ),
                 name=account.name,
                 created_at=account.created_at,
             )
@@ -89,12 +98,27 @@ async def _get_account_transactions(
 
             return tuple(ShowTransaction(
                 id=transaction.id,
-                transaction_type_id=transaction.transaction_type_id,
+                transaction_type=ShowTransactionType(
+                    id=transaction_type.id,
+                    name=transaction_type.name
+                ),
                 amount=transaction.amount,
-                tag_id=transaction.tag_id,
-                account_id=transaction.account_id,
+                tag=ShowTag(
+                    id=tag.id,
+                    name=tag.name
+                ) if tag_id is not None else None,
+                account=ShowAccount(
+                    id=account.id,
+                    name=account.name,
+                    balance=account.balance,
+                    currency=ShowCurrency(
+                        id=currency.id,
+                        name=currency.name,
+                    ),
+                    created_at=account.created_at,
+                ),
                 created_at=transaction.created_at
-            ) for transaction in account_transactions)
+            ) for transaction, account, tag, transaction_type, currency in account_transactions)
 
 
 @router.post("/")

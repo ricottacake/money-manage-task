@@ -4,13 +4,14 @@ from datetime import datetime
 from pydantic import Field
 
 from backend.api.schemas import BaseModel, TunedModel
+from backend.api.schemas.currency import ShowCurrency
 
 
 class ShowAccount(TunedModel):
     id: uuid.UUID
     name: str
     balance: float
-    currency_id: int
+    currency: ShowCurrency
     created_at: datetime
 
 

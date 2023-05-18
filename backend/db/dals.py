@@ -2,10 +2,10 @@ import uuid
 from datetime import datetime
 from typing import Sequence
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.models import Transaction, Account, Currency, Tag, Deposit, Credit
+from backend.db.models import TransactionType as TrType, Transaction, Account, Currency, Tag, Deposit, Credit
 
 
 # DAL - Data Access Layer
@@ -20,10 +20,10 @@ class BaseDAL:
 
 
 class UserDAL(BaseDAL):
-    async def get_accounts(self) -> Sequence[Account] | None:
-        query = select(Account)
+    async def get_accounts(self) -> Sequence[Row]:
+        query = select(Account, Currency).join(Currency, Account.currency_id == Currency.id, isouter=True)
         query_result = await self.db_session.execute(query)
-        return tuple(map(lambda row: row[0], query_result.fetchall()))
+        return query_result.fetchall()
 
 
 class TransactionDAL(BaseDAL):
@@ -158,8 +158,8 @@ class TransactionDAL(BaseDAL):
             self, account_id: uuid.UUID | None = None,
             transaction_type_id: int | None = None,
             tag_id: uuid.UUID | None = None
-    ) -> Sequence[Transaction] | None:
-        query = select(Transaction)
+    ) -> Sequence[tuple[Transaction, Account, Tag, TrType, Currency]] | None:
+        query = select(Transaction, Account, Tag, TrType, Currency)
         if account_id is not None:
             account_dal = AccountDAL(self.db_session)
             await account_dal.check_if_account_exists(account_id=account_id)
@@ -176,8 +176,13 @@ class TransactionDAL(BaseDAL):
             await TagDAL(self.db_session).check_if_tag_exists(tag_id=tag_id)
             query = query.filter(Transaction.tag_id == tag_id)
 
+        query = query.join(Account, Transaction.account_id == Account.id, isouter=True)\
+            .join(Tag, Transaction.tag_id == Tag.id, isouter=True)\
+            .join(TrType, Transaction.transaction_type_id == TrType.id, isouter=True)\
+            .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
         query_result = await self.db_session.execute(query)
-        return tuple(map(lambda row: row[0], query_result.fetchall()))
+        return query_result.fetchall()
 
 
 class AccountDAL(BaseDAL):
@@ -237,7 +242,7 @@ class AccountDAL(BaseDAL):
             account_id: uuid.UUID,
             transaction_type_id: int | None = None,
             tag_id: uuid.UUID | None = None
-    ) -> Sequence[Transaction] | None:
+    ) -> Sequence[tuple[Transaction, Account, Tag, TrType, Currency]]:
         transaction_dal = TransactionDAL(self.db_session)
         return await transaction_dal.get_transactions(
             account_id=account_id, transaction_type_id=transaction_type_id, tag_id=tag_id

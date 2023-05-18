@@ -4,6 +4,8 @@ from datetime import datetime
 from pydantic import Field
 
 from backend.api.schemas import BaseModel, TunedModel
+from backend.api.schemas.account import ShowAccount
+from backend.api.schemas.tag import ShowTag
 
 
 class ShowTransactionType(TunedModel):
@@ -17,10 +19,10 @@ class TransactionTypeCreate(BaseModel):
 
 class ShowTransaction(TunedModel):
     id: uuid.UUID
-    transaction_type_id: int
+    transaction_type: ShowTransactionType
     amount: float = Field(.0, ge=0, lt=10**10)
-    tag_id: uuid.UUID | None
-    account_id: uuid.UUID
+    tag: ShowTag | None
+    account: ShowAccount
     created_at: datetime
 
 
