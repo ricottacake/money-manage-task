@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react'
+import React, {useState, useMemo, useEffect} from 'react'
 import styled from "styled-components";
 import bg from './img/bg.png'
 import ReactDOM from 'react-dom';
@@ -27,10 +27,38 @@ function App() {
   console.log(global);
 
   const [isOpen, setIsOpen] = useState(false);
+
   const [amount, setAmount] = useState('');
   const [account, setAccount] = useState('');
-  const [category, setCategory] = useState('');
-  const [transactionType, setTransactionType] = useState('');
+  const [tag, setTag] = useState('');
+  const [type, setType] = useState('');
+
+  const [selectedTag, setSelectedTag] = useState([]);
+  const [transactionType, setTransactionType] = useState([{id: 1, name: 'income'}]);
+  const [accountType, setAccountType] = useState([]);
+
+  const fetchTag = async () => {
+    const response = await fetch('http://0.0.0.0:8010/api/tag/all');
+    const data = await response.json();
+    setSelectedTag(data);
+  };
+
+  const fetchAccount = async () => {
+    const response = await fetch('http://0.0.0.0:8010/api/accounts');
+    const data = await response.json();
+    setAccountType(data);
+  };
+
+  const fetchType = async () => {
+
+  };
+
+
+  useEffect(() => {
+    fetchTag();
+    fetchAccount();
+    fetchType();
+  }, []);
 
   const handleOpenDialog = () => {
     setIsOpen(true);
@@ -48,18 +76,32 @@ function App() {
     setAccount(event.target.value);
   };
 
-  const handleCategoryChange = (event) => {
-    setCategory(event.target.value);
+  const handleTagChange = (event) => {
+    setTag(event.target.value);
   };
 
-  const handleTransactionTypeChange = (event) => {
-    setTransactionType(event.target.value);
+  const handleTypeChange = (event) => {
+    setType(event.target.value);
   };
 
-  const handleSubmit = () => {
-    // Отправка данных на сервер
-    console.log('Отправленные данные:', amount, account, category, transactionType);
-    // Закрытие окна
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch('http://0.0.0.0:8010/api/transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount : amount, account_id : account, tag_id : tag, transaction_type_id : type }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при отправке данных');
+      }
+
+      console.log('Данные успешно отправлены на сервер');
+    } catch (error) {
+      console.error('Ошибка при отправке данных на сервер:', error);
+    }
     handleCloseDialog();
   };
 
@@ -113,31 +155,53 @@ function App() {
               onChange={handleAmountChange}
             />
             <TextField
+              select
               margin="dense"
               label="Счет"
-              type="text"
               fullWidth
               value={account}
               onChange={handleAccountChange}
-            />
+            >
+
+{accountType.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {option.name}
+                </MenuItem>
+              ))}
+
+       
+              
+            </TextField>
             <TextField
+              select
               margin="dense"
-              label="Категория"
-              type="text"
+              label="Опция"
               fullWidth
-              value={category}
-              onChange={handleCategoryChange}
-            />
+              onChange={handleTagChange}
+            >
+
+{selectedTag.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {option.name}
+                </MenuItem>
+              ))}
+
+       
+              
+            </TextField>
             <TextField
               select
               margin="dense"
               label="Тип транзакции"
               fullWidth
-              value={transactionType}
-              onChange={handleTransactionTypeChange}
+              value={type}
+              onChange={handleTypeChange}
             >
-              <MenuItem value="income">Доход</MenuItem>
-              <MenuItem value="expense">Расход</MenuItem>
+              {transactionType.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                {option.name}
+              </MenuItem>
+              ))}
             </TextField>
           </DialogContentText>
         </DialogContent>
