@@ -3,8 +3,20 @@ import styled from 'styled-components'
 import avatar from '../../img/avatar.png'
 import { signout } from '../../utils/Icons'
 import { menuItems } from '../../utils/menuItems'
+import ButtonNewTransaction from './ButtonNewTransaction'
+import TransactionWindow from './TransactionWindow'
 
 function Navigation({active, setActive}) {
+
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleOpenDialog = () => {
+      setIsOpen(true);
+    };
+  
+    const handleCloseDialog = () => {
+      setIsOpen(false);
+    };
     
     return (
         <NavStyled>
@@ -15,6 +27,7 @@ function Navigation({active, setActive}) {
                     <p>Your Money</p>
                 </div>
             </div>
+            
             <ul className="menu-items">
                 {menuItems.map((item) => {
                     return <li

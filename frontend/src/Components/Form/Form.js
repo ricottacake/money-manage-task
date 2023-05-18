@@ -1,34 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css";
 import { useGlobalContext } from '../../context/globalContext';
 import Button from '../Button/Button';
 import { plus } from '../../utils/Icons';
+import axios from 'axios';
 
 
 function Form() {
-    const {addIncome, getIncomes, error, setError} = useGlobalContext()
+    const {addIncome, getIncomes, error, setError, accounts} = useGlobalContext()
     const [inputState, setInputState] = useState({
+        transaction_type_id: 1,
         amount: '',
-        tag: '',
-        account: ''
+        tag_id: '',
+        account_id: ''
     })
-    const [accountData, setAccountData] = useState([]);
     const { tag, account, amount } = inputState;
-
-    useEffect(() => {
-        
-        axios.get('/api/data')
-          .then(response => {
-            // Обработка успешного ответа
-            setData(response.data);
-          })
-          .catch(error => {
-            // Обработка ошибки
-            console.error(error);
-          });
-      }, []);
 
     const handleInput = name => e => {
         setInputState({...inputState, [name]: e.target.value})
@@ -39,19 +27,11 @@ function Form() {
 
         e.preventDefault()
 
-        /*axios.post('/api/submit-form', inputState)
-            .then(response => {
-
-      })
-      .catch(error => {
-
-      });*/
-
         addIncome(inputState)
         setInputState({
             amount: '',
             tag: '',
-            account: ''
+            account_id: ''
         })
     }
 
@@ -60,7 +40,7 @@ function Form() {
             {error && <p className='error'>{error}</p>}
 
             <div className="selects input-control">
-                <select required value={tag} name="tag" id="tag" onChange={handleInput('tag')}>
+                <select required value={tag} name="tag" id="tag" onChange={handleInput('tag_id')}>
                     <option value=""  disabled >Select Option</option>
                     <option value="salary">Salary</option>
                     <option value="freelancing">Freelancing</option>
@@ -74,10 +54,11 @@ function Form() {
             </div>
 
             <div className="selects input-control">
-                <select required value={account} name="account" id="account" onChange={handleInput('account')}>
-                    <option value=""  disabled >Select Option</option> 
-                    <option value="USD">UAH</option>  
-                    <option value="UAH">USD</option>  
+                <select required value={account} name="account" id="account" onChange={handleInput('account_id')}>
+
+                    {Object.keys(accounts).map(key => (
+        <option key={accounts[key].id} value={accounts[key].id}>{accounts[key].name}</option>
+      ))}
                 </select>
             </div>
           

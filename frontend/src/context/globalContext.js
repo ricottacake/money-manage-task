@@ -1,8 +1,8 @@
-import React, { useContext, useState } from "react"
+import React, { useContext, useState, useEffect } from "react"
 import axios from 'axios'
 
 
-const BASE_URL = "http://0.0.0.0:8000/api/";
+const BASE_URL = "http://0.0.0.0:8010/api/";
 
 
 const GlobalContext = React.createContext()
@@ -11,12 +11,26 @@ export const GlobalProvider = ({children}) => {
 
     const [incomes, setIncomes] = useState([])
     const [expenses, setExpenses] = useState([])
+    const [accounts, setAccounts] = useState([])
     const [error, setError] = useState(null)
+
+    useEffect(() => {
+
+        axios.get(`${BASE_URL}accounts`)
+          .then(response => {
+            setAccounts(response.data)
+            console.log(response.data)
+          })
+          .catch(error => {
+            console.error(error);
+          });
+      }, []);
 
     //calculate incomes
     const addIncome = async (income) => {
+        console.log(income)
         let data = {"transaction_type_id": "3","amount": "3","tag_id": "58fc0d3e-87ac-47f2-b47f-5406a0cb0d6a","account_id": "5fb16d7a-34df-4705-b213-65eb403f768d"}
-        const response = await axios.post(`${BASE_URL}transaction`, data)
+        const response = await axios.post(`${BASE_URL}transaction`, income)
             .catch((err) =>{
                 setError(err.response.data.message)
             })
@@ -102,6 +116,7 @@ export const GlobalProvider = ({children}) => {
             totalExpenses,
             totalBalance,
             transactionHistory,
+            accounts,
             error,
             setError
         }}>

@@ -1,5 +1,6 @@
 import {createGlobalStyle} from 'styled-components'
 
+
 export const GlobalStyle = createGlobalStyle`
     *{
         margin: 0;
@@ -28,6 +29,36 @@ export const GlobalStyle = createGlobalStyle`
     h1, h2, h3, h4, h5, h6{
         color: var(--primary-color);
     }
+
+    .popup-window {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #fff;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      
+
+    .transaction-window {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #fff;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      
+      .transaction-window-content {
+        text-align: center;
+      }
+      
 
     .error{
         color: red;
