@@ -95,12 +95,12 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка при отправке данных');
+        throw new Error('err');
       }
 
-      console.log('Данные успешно отправлены на сервер');
+      console.log('suc');
     } catch (error) {
-      console.error('Ошибка при отправке данных на сервер:', error);
+      console.error('err', error);
     }
     handleCloseDialog();
   };
@@ -134,7 +134,7 @@ function App() {
 
           <div>
       <Button variant="contained" onClick={handleOpenDialog}>
-        Открыть окно
+        open
       </Button>
       <Dialog
         open={isOpen}
@@ -142,13 +142,13 @@ function App() {
         aria-labelledby="dialog-title"
         aria-describedby="dialog-description"
       >
-        <DialogTitle id="dialog-title">Всплывающее окно</DialogTitle>
+        <DialogTitle id="dialog-title">window</DialogTitle>
         <DialogContent>
           <DialogContentText id="dialog-description">
             <TextField
               autoFocus
               margin="dense"
-              label="Сумма транзакции"
+              label="sum"
               type="number"
               fullWidth
               value={amount}
@@ -157,7 +157,7 @@ function App() {
             <TextField
               select
               margin="dense"
-              label="Счет"
+              label="account"
               fullWidth
               value={account}
               onChange={handleAccountChange}
@@ -175,7 +175,7 @@ function App() {
             <TextField
               select
               margin="dense"
-              label="Опция"
+              label="option"
               fullWidth
               onChange={handleTagChange}
             >
@@ -192,7 +192,7 @@ function App() {
             <TextField
               select
               margin="dense"
-              label="Тип транзакции"
+              label="type transaction"
               fullWidth
               value={type}
               onChange={handleTypeChange}
@@ -206,8 +206,8 @@ function App() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Закрыть окно</Button>
-          <Button onClick={handleSubmit}>Отправить</Button>
+          <Button onClick={handleCloseDialog}>close</Button>
+          <Button onClick={handleSubmit}>send</Button>
         </DialogActions>
       </Dialog>
     </div>

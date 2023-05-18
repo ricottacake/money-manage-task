@@ -15,18 +15,15 @@ const TransactionWindow = ({ onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Отправка данных на сервер
+
     const data = {
       name: name,
       email: email,
     };
 
-    // Ваш код для отправки данных на сервер
-
-    // Сброс полей
     setName('');
     setEmail('');
-    onClose(); // Закрытие диалогового окна
+    onClose(); 
   };
 
   return (
@@ -42,8 +39,8 @@ const TransactionWindow = ({ onClose }) => {
           <input type="email" value={email} onChange={handleEmailChange} />
         </label>
         <br />
-        <button type="submit">Отправить</button>
-        <button onClick={onClose}>Закрыть</button>
+        <button type="submit">send</button>
+        <button onClick={onClose}>close</button>
       </form>
     </div>
   );
