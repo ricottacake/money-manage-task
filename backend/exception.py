@@ -67,6 +67,16 @@ class CreditNotFound(ProjectBaseException):
         )
 
 
+class DepositNotFound(ProjectBaseException):
+    def __init__(self, deposit_id: uuid.UUID, *args, **kwargs):
+        super(DepositNotFound, self).__init__(
+            status_code=404,
+            detail=f"Deposit with id '{deposit_id}' not found!",
+            *args,
+            **kwargs
+        )
+
+
 class CreditAlreadyClosed(ProjectBaseException):
     def __init__(self, credit_id: uuid.UUID, *args, **kwargs):
         super(CreditAlreadyClosed, self).__init__(
@@ -83,6 +93,16 @@ class ReservedTransactionChange(ProjectBaseException):
             status_code=422,
             detail=f"Сan not update or delete a reserved transaction! "
                    f"Also can not update transaction to reserved transaction!",
+            *args,
+            **kwargs
+        )
+
+
+class NotEnoughMoney(ProjectBaseException):
+    def __init__(self, *args, **kwargs):
+        super(NotEnoughMoney, self).__init__(
+            status_code=422,
+            detail=f"Not enough money!",
             *args,
             **kwargs
         )

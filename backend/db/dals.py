@@ -15,7 +15,7 @@ from backend.db.models import TransactionType as TrType, Transaction, \
 from backend.db.session import TransactionTypeEnum
 from backend.exception import AccountNotFound, TransactionTypeNotFound, TransactionNotFound, \
     TagNotFound, CurrencyNotFound, ReservedTransactionChange, ProjectBaseException, CreditNotFound, \
-    CreditAlreadyClosed
+    CreditAlreadyClosed, DepositNotFound, NotEnoughMoney
 
 
 class BaseDAL:
@@ -328,21 +328,45 @@ class TagDAL(BaseDAL):
 
 class DepositDAL(BaseDAL):
     async def create_deposit(
-            self, name: uuid.UUID, amount: float, account_id: uuid.UUID
-    ) -> Deposit:
-        new_deposit = Deposit(
-            name=name,
-            amount=amount,
-            account_id=account_id
-        )
-        self.db_session.add(new_deposit)
-        await self.db_session.flush()
-        return new_deposit
+            self, name: str, amount: float, account_id: uuid.UUID, tag_id: uuid.UUID | None = None
+    ) -> (Deposit, Transaction):
+        transaction_dal = TransactionDAL(self.db_session)
+        checkpoint = self.db_session.begin_nested()
 
-    async def get_deposit_by_id(self, deposit_id: uuid.UUID) -> Deposit | None:
-        return await self.db_session.get(Deposit, deposit_id)
+        account = await AccountDAL(self.db_session).get_account_by_id(account_id)
+        if account.balance < amount:
+            raise NotEnoughMoney
 
-    async def update_deposit(self, deposit_id: uuid.UUID, **kwargs) -> Deposit | None:
+        try:
+            new_transaction = await transaction_dal.create_transaction(
+                transaction_type_id=TransactionTypeEnum.deposit_open.value,
+                amount=amount,
+                account_id=account_id,
+                tag_id=tag_id
+            )
+
+            new_deposit = Deposit(
+                name=name,
+                amount=amount,
+                account_id=account_id
+            )
+            self.db_session.add(new_deposit)
+            await self.db_session.flush()
+        except ProjectBaseException as exception:
+            raise exception
+        except Exception as exception:
+            await checkpoint.rollback()
+            raise exception
+
+        return new_deposit, new_transaction
+
+    async def get_deposit_by_id(self, deposit_id: uuid.UUID) -> Deposit:
+        deposit = await self.db_session.get(Deposit, deposit_id)
+        if deposit is None:
+            raise DepositNotFound(deposit_id=deposit_id)
+        return deposit
+
+    async def update_deposit(self, deposit_id: uuid.UUID, **kwargs) -> Deposit:
         query = update(Deposit) \
             .where(Deposit.id == deposit_id) \
             .values(**kwargs) \
@@ -350,12 +374,54 @@ class DepositDAL(BaseDAL):
         query_result = await self.db_session.execute(query)
         update_deposit_id_row = query_result.fetchone()
 
-        if update_deposit_id_row is not None:
-            return update_deposit_id_row[0]
+        if update_deposit_id_row is None:
+            raise DepositNotFound(deposit_id=deposit_id)
+        return update_deposit_id_row[0]
 
     async def delete_deposit(self, deposit_id: uuid.UUID) -> None:
         query = select(Deposit).where(Deposit.id == deposit_id)
         await self.db_session.delete(query)
+
+    async def get_account_deposits(self, account_id: uuid.UUID) -> Sequence[Row]:
+        query = select(Account, Deposit, Currency)\
+            .filter(Account.id == account_id)\
+            .join(Deposit, Deposit.account_id == Account.id, isouter=True)\
+            .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
+        query_result = await self.db_session.execute(query)
+
+        return query_result.fetchall()
+
+    async def get_user_deposits(self) -> Sequence[Row]:
+        query = select(Account, Deposit, Currency) \
+            .join(Deposit, Deposit.account_id == Account.id, isouter=True) \
+            .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
+        query_result = await self.db_session.execute(query)
+
+        return query_result.fetchall()
+
+    async def close_deposit(self, deposit_id: uuid.UUID) -> (uuid.UUID, Transaction):
+        transaction_dal = TransactionDAL(self.db_session)
+
+        deposit = await self.get_deposit_by_id(deposit_id=deposit_id)
+
+        if not deposit.is_open:
+            raise DepositAlreadyClosed(deposit_id=deposit_id)
+
+        query = update(Deposit) \
+            .filter(Deposit.id == deposit_id) \
+            .values(is_open=False)
+
+        await self.db_session.execute(query)
+
+        transaction = await transaction_dal.create_transaction(
+            transaction_type_id=TransactionTypeEnum.deposit_close.value,
+            amount=deposit.amount,
+            account_id=deposit.account_id
+        )
+
+        return deposit_id, transaction
 
 
 class CreditDAL(BaseDAL):
@@ -435,6 +501,10 @@ class CreditDAL(BaseDAL):
 
         if not credit.is_open:
             raise CreditAlreadyClosed(credit_id=credit_id)
+
+        account = await AccountDAL(self.db_session).get_account_by_id(credit.account_id)
+        if account.balance < credit.amount:
+            raise NotEnoughMoney
 
         query = update(Credit) \
             .filter(Credit.id == credit_id) \

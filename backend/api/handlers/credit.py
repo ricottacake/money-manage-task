@@ -88,7 +88,9 @@ async def _get_credit_by_id(credit_id: uuid.UUID, db) -> ShowCredit:
             )
 
 
-async def _update_credit(credit_id: uuid.UUID, db, request_body: UpdateCreditRequest) -> UpdatedCreditResponse:
+async def _update_credit(
+        credit_id: uuid.UUID, db, request_body: UpdateCreditRequest
+) -> UpdatedCreditResponse:
     async with db as session:
         async with session.begin():
             credit_dal = CreditDAL(session)

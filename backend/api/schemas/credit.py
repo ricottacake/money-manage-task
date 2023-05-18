@@ -9,7 +9,7 @@ from backend.api.schemas.account import ShowAccount
 class ShowCredit(TunedModel):
     id: uuid.UUID
     name: str
-    amount: float = Field(.0, ge=0, lt=10**10)
+    amount: float
     account: ShowAccount
     is_open: bool
 
