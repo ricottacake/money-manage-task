@@ -1,3 +1,4 @@
+import enum
 from collections.abc import Generator
 from enum import Enum
 
@@ -9,12 +10,20 @@ from sqlalchemy import create_engine
 from config import DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME
 
 
-TRANSACTION_TYPE_DATA = (
-    {"id": 1, "name": "income"},
-    {"id": 2, "name": "expense"},
-    {"id": 3, "name": "money_transfer_sender"},
-    {"id": 4, "name": "money_transfer_receiver"},
-)
+@enum.unique
+class TransactionTypeEnum(enum.IntEnum):
+    income = 1
+    expense = 2
+    money_transfer_sender = 3
+    money_transfer_receiver = 4
+
+    @property
+    def is_plus_sign(self) -> bool:
+        return self.name in ("income", "money_transfer_receiver")
+
+    @property
+    def is_transfer_type(self) -> bool:
+        return self.name in ("money_transfer_receiver", "money_transfer_receiver")
 
 
 CURRENCY_DATA = (
@@ -33,41 +42,52 @@ async_session = sessionmaker(
 )
 
 
-def _db_pre_session():
-    from backend.db.models import TransactionType, Currency
+def _compare_transaction_type_enum_with_db_table(_db_session):
+    from backend.db.models import TransactionType
 
+    for transaction_type in TransactionTypeEnum:
+        transaction_type_name, transaction_type_id = transaction_type.name, transaction_type.value
+        transaction_type = _db_session.get(TransactionType, transaction_type_id)
+        if transaction_type is None:
+            _db_session.add(
+                TransactionType(
+                    transaction_type_id=transaction_type_id,
+                    name=transaction_type_name
+                )
+            )
+        elif transaction_type.name != transaction_type_name:
+            raise ValueError(
+                f"TransactionType with id '{transaction_type_id}' "
+                f"does not '{transaction_type_name}'!"
+            )
+
+    if _db_session.query(TransactionType).count() != 4:
+        raise ValueError("Too many TransactionType rows. There should be only 4 of them!")
+
+
+def _autofill_currency_db_table(_db_session):
+    from backend.db.models import Currency
+
+    for currency_data in CURRENCY_DATA:
+        currency = _db_session.get(Currency, currency_data["id"])
+        if currency is None:
+            _db_session.add(Currency(**currency_data))
+        elif currency.name != currency_data["name"]:
+            raise ValueError(
+                "Currency with id {id} does not '{name}'!".format(**currency_data)
+            )
+
+
+def db_pre_session():
     sync_db_url = db_url[:10] + db_url[18:]
     sync_engine = create_engine(sync_db_url)
 
-    is_updated = False
+    db_session = create_session(sync_engine)
 
-    with create_session(sync_engine) as db_session:
-        for transaction_type_data in TRANSACTION_TYPE_DATA:
-            transaction_type = db_session.get(TransactionType, transaction_type_data["id"])
-            if transaction_type is None:
-                db_session.add(TransactionType(**transaction_type_data))
-                is_updated = True
-            elif transaction_type.name != transaction_type_data["name"]:
-                raise ValueError(
-                    "TransactionType with id {id} does not '{name}'!".format(**transaction_type_data)
-                )
+    _compare_transaction_type_enum_with_db_table(db_session)
+    _autofill_currency_db_table(db_session)
 
-        if db_session.query(TransactionType).count() != 4:
-            raise ValueError("Too many TransactionType rows. There should be only 4 of them!")
-
-        for currency_data in CURRENCY_DATA:
-            currency = db_session.get(Currency, currency_data["id"])
-            if currency is None:
-                db_session.add(Currency(**currency_data))
-                is_updated = True
-            elif currency.name != currency_data["name"]:
-                raise ValueError(
-                    "Currency with id {id} does not '{name}'!".format(**currency_data)
-                )
-
-        if is_updated:
-            db_session.flush()
-            db_session.commit()
+    db_session.flush()
 
 
 async def get_db() -> Generator:
@@ -77,4 +97,4 @@ async def get_db() -> Generator:
     finally:
         await session.close()
 
-_db_pre_session()
+db_pre_session()

@@ -1,25 +1,25 @@
 import uuid
 from typing import Sequence
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.tag import ShowTag, CreatedTagResponse, TagCreate
 from backend.db.dals import TagDAL
 from backend.db.session import get_db
-
+from backend.exception import TagNotFound
 
 router = APIRouter(
     prefix="/tag"
 )
 
 
-async def _create_new_tag(body: TagCreate, db) -> uuid.UUID:
+async def _create_new_tag(request_body: TagCreate, db) -> CreatedTagResponse:
     async with db as session:
         async with session.begin():
             tag_dal = TagDAL(session)
-            tag = await tag_dal.create_tag(name=body.name)
-            return tag.id
+            tag = await tag_dal.create_tag(name=request_body.name)
+            return CreatedTagResponse(created_tag_id=tag.id)
 
 
 async def _get_tags(db) -> Sequence[ShowTag] | None:
@@ -35,7 +35,7 @@ async def _get_tags(db) -> Sequence[ShowTag] | None:
             ) for tag in tags)
 
 
-async def _get_tag_by_id(tag_id: uuid.UUID, db) -> ShowTag | None:
+async def _get_tag_by_id(tag_id: uuid.UUID, db) -> ShowTag:
     async with db as session:
         async with session.begin():
             tag_dal = TagDAL(session)
@@ -44,11 +44,10 @@ async def _get_tag_by_id(tag_id: uuid.UUID, db) -> ShowTag | None:
                 tag_id=tag_id
             )
 
-            if tag is not None:
-                return ShowTag(
-                    id=tag.id,
-                    name=tag.name
-                )
+            return ShowTag(
+                id=tag.id,
+                name=tag.name
+            )
 
 
 @router.get("/all/")
@@ -58,9 +57,16 @@ async def get_tags(db: AsyncSession = Depends(get_db)) -> Sequence[ShowTag]:
 
 @router.get("/", response_model=ShowTag)
 async def get_tag(tag_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> ShowTag:
-    return await _get_tag_by_id(tag_id, db=db)
+    try:
+        tag = await _get_tag_by_id(tag_id, db=db)
+    except TagNotFound as exception:
+        raise exception
+    return tag
 
 
 @router.post("/", response_model=CreatedTagResponse)
-async def create_tag(body: TagCreate, db: AsyncSession = Depends(get_db)) -> CreatedTagResponse:
-    return CreatedTagResponse(created_tag_id=await _create_new_tag(body, db=db))
+async def create_tag(
+        request_body: TagCreate, db: AsyncSession = Depends(get_db)
+) -> CreatedTagResponse:
+    created_tag_response = await _create_new_tag(request_body, db=db)
+    return created_tag_response

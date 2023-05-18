@@ -3,14 +3,15 @@ from datetime import datetime
 
 from pydantic import Field
 
-from backend.api.schemas import BaseModel, TunedModel
+from backend.api.schemas import BaseModel, TunedModel, OrderBy
+from backend.api.schemas.currency import ShowCurrency
 
 
 class ShowAccount(TunedModel):
     id: uuid.UUID
     name: str
     balance: float
-    currency_id: int
+    currency: ShowCurrency
     created_at: datetime
 
 
@@ -38,3 +39,10 @@ class UpdatedAccountResponse(BaseModel):
 
 class DeletedAccountResponse(BaseModel):
     deleted_account_id: uuid.UUID
+
+
+class GetAccountTransactionsRequest(BaseModel):
+    account_id: uuid.UUID
+    transaction_type_id: int | None
+    tag_id: uuid.UUID | None
+    order_by: OrderBy
