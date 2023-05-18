@@ -12,6 +12,10 @@ class TagCreate(BaseModel):
     name: str
 
 
+class CreatedTagResponse(BaseModel):
+    created_tag_id: uuid.UUID
+
+
 class UpdateTagRequest(BaseModel):
     name: str
 

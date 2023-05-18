@@ -64,6 +64,6 @@ class Transaction(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_type_id = Column(Integer, ForeignKey("transaction_type.id"), nullable=False)
     amount = Column(Float, nullable=False, default=1000)
-    tag_id = Column(UUID(as_uuid=True), ForeignKey("tag.id"), default=None)
+    tag_id = Column(UUID(as_uuid=True), ForeignKey("tag.id"), nullable=True, default=None)
     account_id = Column(UUID(as_uuid=True), ForeignKey("account.id"), nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)

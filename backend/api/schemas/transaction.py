@@ -31,6 +31,10 @@ class TransactionCreate(BaseModel):
     account_id: uuid.UUID
 
 
+class CreatedTransactionResponse(BaseModel):
+    created_transaction_id: uuid.UUID
+
+
 class UpdateTransactionRequest(BaseModel):
     transaction_type_id: int | None
     amount: float | None

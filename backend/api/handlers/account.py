@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.account import AccountCreate, ShowAccount, \
-    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse
+    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse
 from backend.api.schemas.transaction import ShowTransaction
 from backend.db.dals import AccountDAL, TransactionTypeDAL
 from backend.db.session import get_db
@@ -106,8 +106,8 @@ async def _get_account_transactions(account_id: uuid.UUID, db, transaction_type_
 @router.post("/")
 async def create_account(
         body: AccountCreate, db: AsyncSession = Depends(get_db)
-) -> uuid.UUID:
-    return await _create_new_account(body, db)
+) -> CreatedAccountResponse:
+    return CreatedAccountResponse(created_account_id=await _create_new_account(body, db))
 
 
 @router.get("/", response_model=ShowAccount)
@@ -128,14 +128,14 @@ async def update_account(
         account_id: uuid.UUID, body: UpdateAccountRequest,
         db: AsyncSession = Depends(get_db)
 ) -> UpdatedAccountResponse:
-    print(body)
+
     updated_account_params = body.dict(exclude_none=True)
     if updated_account_params == {}:
         raise HTTPException(
             status_code=422,
             detail=f"At least 1 parameter for account update should be provided"
         )
-    print(updated_account_params)
+
     updated_account_id = await _update_account(
         account_id=account_id,
         updated_account_params=updated_account_params,
@@ -169,7 +169,7 @@ async def delete_account(
     return DeletedAccountResponse(deleted_account_id=deleted_account_id)
 
 
-@router.get("/transactions")
+@router.get("/transactions/")
 async def get_account_transactions(
         account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
         transaction_type_id: int | None = None

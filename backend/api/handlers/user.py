@@ -29,7 +29,7 @@ async def _get_user_accounts(db) -> Sequence[ShowAccount] | None:
             ) for account in user_accounts)
 
 
-@router.get("/accounts")
+@router.get("/accounts/")
 async def get_account_transactions(db: AsyncSession = Depends(get_db)) -> Sequence[ShowAccount]:
     user_accounts = await _get_user_accounts(
         db=db

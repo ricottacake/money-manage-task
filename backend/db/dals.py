@@ -1,5 +1,5 @@
-import bdb
 import uuid
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import select, update, delete, and_, Row
@@ -9,6 +9,9 @@ from backend.db.models import Transaction, Account, TransactionType, Currency, T
 
 
 # DAL - Data Access Layer
+from backend.db.session import TRANSACTION_TYPE_DATA
+
+
 class BaseDAL:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
@@ -27,20 +30,23 @@ class TransactionDAL(BaseDAL):
             transaction_type_id: int,
             amount: float,
             account_id: uuid.UUID,
-            tag_id: uuid.UUID | None = None
+            tag_id: uuid.UUID | None = None,
+            created_at: datetime | None = None
     ) -> Transaction | None:
 
         new_transaction = Transaction(
             transaction_type_id=transaction_type_id,
             amount=amount,
             account_id=account_id,
-            tag_id=tag_id
+            tag_id=tag_id,
+            created_at=datetime.utcnow() if created_at is None else created_at
         )
 
-        tag_dal = TagDAL(self.db_session)
+        if tag_id is not None:
+            tag_dal = TagDAL(self.db_session)
 
-        if await tag_dal.get_tag_by_id(tag_id) is None:
-            return
+            if await tag_dal.get_tag_by_id(tag_id) is None:
+                return
 
         transaction_type_dal = TransactionTypeDAL(self.db_session)
         is_positive_transaction = await transaction_type_dal.is_positive_transaction(
@@ -86,9 +92,12 @@ class TransactionDAL(BaseDAL):
             return delete_transaction_id_row[0]
 
     async def get_transactions(
-            self, account_id, transaction_type_id: int | None = None
+            self, account_id: uuid.UUID | None = None,
+            transaction_type_id: int | None = None
     ) -> Sequence[Transaction] | None:
-        query = select(Transaction).where(Transaction.account_id == account_id)
+        query = select(Transaction)
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
         if transaction_type_id is not None:
             query = query.filter(Transaction.transaction_type_id == transaction_type_id)
         query_result = await self.db_session.execute(query)
@@ -163,7 +172,10 @@ class TransactionTypeDAL(BaseDAL):
         query_result = await self.db_session.execute(query)
         transaction_type_row = query_result.fetchone()
         if transaction_type_row is not None:
-            return transaction_type_row[0].name in ("income", "money_transfer_receiver")
+
+            return transaction_type_row[0].name in (
+                TRANSACTION_TYPE_DATA[0]["name"], TRANSACTION_TYPE_DATA[3]["name"]
+            )
 
 
 class CurrencyDAL(BaseDAL):
@@ -173,12 +185,12 @@ class CurrencyDAL(BaseDAL):
         await self.db_session.flush()
         return new_currency
 
-    async def get_currency_by_id(self, currency_id: uuid.UUID) -> Currency | None:
+    async def get_currency_by_id(self, currency_id: int) -> Currency | None:
         return await self.db_session.get(Currency, currency_id)
 
 
 class TagDAL(BaseDAL):
-    async def create_tag(self, name: uuid.UUID) -> Tag:
+    async def create_tag(self, name: str) -> Tag:
         new_tag = Tag(name=name)
         self.db_session.add(new_tag)
         await self.db_session.flush()
@@ -201,6 +213,11 @@ class TagDAL(BaseDAL):
     async def delete_tag(self, tag_id: uuid.UUID) -> None:
         query = select(Tag).where(Tag.id == tag_id)
         await self.db_session.delete(query)
+
+    async def get_tags(self) -> Sequence[Tag]:
+        query = select(Tag)
+        query_result = await self.db_session.execute(query)
+        return tuple(map(lambda row: row[0], query_result.fetchall()))
 
 
 class DepositDAL(BaseDAL):
