@@ -27,7 +27,7 @@ class ShowTransaction(TunedModel):
 class TransactionCreate(BaseModel):
     transaction_type_id: int
     amount: float = Field(.0, ge=0, lt=10**10)
-    tag_id: uuid.UUID
+    tag_id: uuid.UUID | None
     account_id: uuid.UUID
 
 

@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-async def _get_user_accounts(db) -> Sequence[ShowAccount] | None:
+async def _get_user_accounts(db) -> Sequence[ShowAccount]:
     async with db as session:
         async with session.begin():
             account_dal = UserDAL(session)
@@ -31,10 +31,7 @@ async def _get_user_accounts(db) -> Sequence[ShowAccount] | None:
 
 @router.get("/accounts/")
 async def get_account_transactions(db: AsyncSession = Depends(get_db)) -> Sequence[ShowAccount]:
-    user_accounts = await _get_user_accounts(
-        db=db
-    )
-
+    user_accounts = await _get_user_accounts(db=db)
     return user_accounts
 
 
