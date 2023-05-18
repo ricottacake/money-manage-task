@@ -1,14 +1,10 @@
-import uuid
-from typing import Sequence
-from decimal import Decimal
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 import requests
 
-from backend.api.schemas.transfer import TransferCreate, ShowTransfer, CreatedTransferResponse
-from backend.db.dals import TransactionDAL, TransactionTypeDAL, AccountDAL, CurrencyDAL
-from backend.db.session import get_db, TRANSACTION_TYPE_DATA
+from backend.api.schemas.transfer import TransferCreate, CreatedTransferResponse
+from backend.db.dals import TransactionDAL, AccountDAL, CurrencyDAL
+from backend.db.session import get_db, TransactionTypeEnum
 from backend.exception import AccountNotFound
 from config import EXCHANGE_RATE_API_URL, EXCHANGE_RATE_API_KEY
 
@@ -37,7 +33,9 @@ async def _create_new_transfer(request_body: TransferCreate, db) -> CreatedTrans
 
             response = requests.get(
                 EXCHANGE_RATE_API_URL +
-                f"?from={currency_from.name}&to={currency_to.name}&amount={request_body.amount_from}"
+                f"?from={currency_from.name}"
+                f"&to={currency_to.name}"
+                f"&amount={request_body.amount_from}"
             )
 
             if response.status_code != 200:
@@ -50,13 +48,13 @@ async def _create_new_transfer(request_body: TransferCreate, db) -> CreatedTrans
             checkpoint = session.begin_nested()
             try:
                 transaction_from = await transaction_dal.create_transaction(
-                    transaction_type_id=TRANSACTION_TYPE_DATA[2]["id"],
+                    transaction_type_id=TransactionTypeEnum.money_transfer_sender.value,
                     amount=request_body.amount_from,
                     account_id=request_body.from_account_id
                 )
 
                 transaction_to = await transaction_dal.create_transaction(
-                    transaction_type_id=TRANSACTION_TYPE_DATA[3]["id"],
+                    transaction_type_id=TransactionTypeEnum.money_transfer_receiver.value,
                     amount=amount_to,
                     account_id=request_body.to_account_id,
                     created_at=transaction_from.created_at

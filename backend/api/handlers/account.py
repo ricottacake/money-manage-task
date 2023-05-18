@@ -72,13 +72,19 @@ async def _delete_account(account_id: uuid.UUID, db) -> DeletedAccountResponse:
             return DeletedAccountResponse(deleted_account_id=deleted_account_id)
 
 
-async def _get_account_transactions(account_id: uuid.UUID, db, transaction_type_id: int | None = None) -> Sequence[ShowTransaction] | None:
+async def _get_account_transactions(
+        account_id: uuid.UUID,
+        db,
+        transaction_type_id: int | None = None,
+        tag_id: uuid.UUID | None = None
+) -> Sequence[ShowTransaction] | None:
     async with db as session:
         async with session.begin():
             account_dal = AccountDAL(session)
             account_transactions = await account_dal.get_account_transactions(
                 account_id=account_id,
-                transaction_type_id=transaction_type_id
+                transaction_type_id=transaction_type_id,
+                tag_id=tag_id
             )
 
             return tuple(ShowTransaction(
@@ -151,13 +157,15 @@ async def delete_account(
 @router.get("/transactions/")
 async def get_account_transactions(
         account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
-        transaction_type_id: int | None = None
+        transaction_type_id: int | None = None,
+        tag_id: uuid.UUID | None = None
 ) -> Sequence[ShowTransaction]:
     try:
         account_transactions = await _get_account_transactions(
             account_id=account_id,
             db=db,
-            transaction_type_id=transaction_type_id
+            transaction_type_id=transaction_type_id,
+            tag_id=tag_id
         )
     except (AccountNotFound, TransactionTypeNotFound) as exception:
         raise exception

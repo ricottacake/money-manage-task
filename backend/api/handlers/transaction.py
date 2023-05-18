@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, \
     UpdateTransactionRequest, UpdatedTransactionResponse, DeletedTransactionResponse, \
     ShowTransactionType, CreatedTransactionResponse
-from backend.db.dals import TransactionDAL, TransactionTypeDAL, AccountDAL
-from backend.db.session import get_db
+from backend.db.dals import TransactionDAL
+from backend.db.session import get_db, TransactionTypeEnum
 from backend.exception import TransactionNotFound, TransactionTypeNotFound, TagNotFound, \
     AccountNotFound
 
@@ -17,7 +17,9 @@ router = APIRouter(
 )
 
 
-async def _create_new_transaction(request_body: TransactionCreate, db) -> CreatedTransactionResponse:
+async def _create_new_transaction(
+        request_body: TransactionCreate, db
+) -> CreatedTransactionResponse:
     async with db as session:
         async with session.begin():
             transaction_dal = TransactionDAL(session)
@@ -54,25 +56,25 @@ async def _get_transaction_by_id(transaction_id: uuid.UUID, db) -> ShowTransacti
 async def _get_transaction_type_by_id(transaction_type_id: int, db) -> ShowTransactionType:
     async with db as session:
         async with session.begin():
-            transaction_type_dal = TransactionTypeDAL(session)
-
-            transaction_type = await transaction_type_dal.get_transaction_type_by_id(
-                transaction_type_id=transaction_type_id
-            )
+            try:
+                transaction_type_enum = TransactionTypeEnum(transaction_type_id)
+            except ValueError:
+                raise TransactionTypeNotFound(transaction_type_id=transaction_type_id)
 
             return ShowTransactionType(
-                id=transaction_type.id,
-                name=transaction_type.name
+                id=transaction_type_enum.value,
+                name=transaction_type_enum.name
             )
 
 
-async def _get_transactions(db, transaction_type_id: int | None = None
+async def _get_transactions(
+        db, transaction_type_id: int | None = None, tag_id: uuid.UUID | None = None
                             ) -> Sequence[ShowTransaction]:
     async with db as session:
         async with session.begin():
             transaction_dal = TransactionDAL(session)
             transactions = await transaction_dal.get_transactions(
-                transaction_type_id=transaction_type_id
+                transaction_type_id=transaction_type_id, tag_id=tag_id
             )
 
             return tuple(ShowTransaction(
@@ -186,11 +188,13 @@ async def get_transaction_type(
 
 @router.get("/all/")
 async def get_transactions(
-        db: AsyncSession = Depends(get_db), transaction_type_id: int | None = None
+        db: AsyncSession = Depends(get_db),
+        transaction_type_id: int | None = None,
+        tag_id: uuid.UUID | None = None
 ) -> Sequence[ShowTransaction]:
     try:
         transactions = await _get_transactions(
-            db=db, transaction_type_id=transaction_type_id
+            db=db, transaction_type_id=transaction_type_id, tag_id=tag_id
         )
     except TransactionNotFound as exception:
         raise exception

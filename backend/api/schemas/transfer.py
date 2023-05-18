@@ -1,16 +1,6 @@
 import uuid
-from datetime import datetime
 
-from backend.api.schemas import BaseModel, TunedModel
-
-
-class ShowTransfer(TunedModel):
-    from_account_id: uuid.UUID
-    to_account_id: uuid.UUID
-    amount_from: float
-    amount_to: float
-    exchange_rate: float
-    created_at: datetime
+from backend.api.schemas import BaseModel
 
 
 class TransferCreate(BaseModel):

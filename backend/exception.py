@@ -51,3 +51,14 @@ class CurrencyNotFound(HTTPException):
             *args,
             **kwargs
         )
+
+
+class TransferTransactionChange(HTTPException):
+    def __init__(self, *args, **kwargs):
+        super(TransferTransactionChange, self).__init__(
+            status_code=422,
+            detail=f"Сan not update or delete a transfer transaction! "
+                   f"Also can not update transaction to transfer transaction!",
+            *args,
+            **kwargs
+        )

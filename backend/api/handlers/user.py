@@ -1,4 +1,3 @@
-import uuid
 from typing import Sequence
 
 from fastapi import APIRouter, Depends
@@ -30,7 +29,7 @@ async def _get_user_accounts(db) -> Sequence[ShowAccount]:
 
 
 @router.get("/accounts/")
-async def get_account_transactions(db: AsyncSession = Depends(get_db)) -> Sequence[ShowAccount]:
+async def get_user_accounts(db: AsyncSession = Depends(get_db)) -> Sequence[ShowAccount]:
     user_accounts = await _get_user_accounts(db=db)
     return user_accounts
 
