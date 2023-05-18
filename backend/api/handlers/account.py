@@ -185,6 +185,7 @@ async def delete_account(
 async def get_account_transactions(
         request_body: GetAccountTransactionsRequest, db: AsyncSession = Depends(get_db)
 ) -> Sequence[ShowTransaction]:
+    print(request_body)
     try:
         account_transactions = await _get_account_transactions(
             account_id=request_body.account_id,
@@ -195,5 +196,5 @@ async def get_account_transactions(
         )
     except (AccountNotFound, TransactionTypeNotFound) as exception:
         raise exception
-
+    
     return account_transactions
