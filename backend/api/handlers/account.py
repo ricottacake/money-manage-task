@@ -137,7 +137,7 @@ async def get_account(
 ) -> ShowAccount:
     try:
         account = await _get_account_by_id(account_id, db)
-    except AccountNotFound as exception:
+    except HTTPException as exception:
         raise exception
     return account
 
@@ -160,7 +160,7 @@ async def update_account(
             updated_account_params=updated_account_params,
             db=db
         )
-    except AccountNotFound as exception:
+    except HTTPException as exception:
         raise exception
 
     return updated_account_response
@@ -175,7 +175,7 @@ async def delete_account(
             account_id=account_id,
             db=db
         )
-    except AccountNotFound as exception:
+    except HTTPException as exception:
         raise exception
 
     return deleted_account_response
@@ -193,7 +193,7 @@ async def get_account_transactions(
             tag_id=request_body.tag_id,
             order_by=request_body.order_by
         )
-    except (AccountNotFound, TransactionTypeNotFound) as exception:
+    except HTTPException as exception:
         raise exception
 
     return account_transactions

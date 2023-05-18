@@ -13,7 +13,7 @@ from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, 
 from backend.db.dals import TransactionDAL, AccountDAL, TagDAL, CurrencyDAL
 from backend.db.session import get_db, TransactionTypeEnum
 from backend.exception import TransactionNotFound, TransactionTypeNotFound, TagNotFound, \
-    AccountNotFound
+    AccountNotFound, ProjectBaseException
 
 router = APIRouter(
     prefix="/transaction"
@@ -156,9 +156,7 @@ async def create_transaction(
 ) -> CreatedTransactionResponse:
     try:
         created_transaction_response = await _create_new_transaction(request_body, db)
-    except (
-            AccountNotFound, TransactionNotFound, TransactionTypeNotFound, TagNotFound
-    ) as exception:
+    except HTTPException as exception:
         raise exception
 
     return created_transaction_response
@@ -170,7 +168,7 @@ async def get_transaction(
 ) -> ShowTransaction:
     try:
         transaction = await _get_transaction_by_id(transaction_id, db)
-    except TransactionNotFound as exception:
+    except HTTPException as exception:
         raise exception
     return transaction
 
@@ -193,7 +191,7 @@ async def update_transaction(
             updated_transaction_params=updated_transaction_params,
             db=db
         )
-    except TransactionNotFound as expection:
+    except HTTPException as expection:
         raise expection
 
     return updated_transaction_response
@@ -208,7 +206,7 @@ async def delete_transaction(
             transaction_id=transaction_id,
             db=db
         )
-    except TransactionNotFound as exception:
+    except HTTPException as exception:
         raise exception
 
     return deleted_transaction_response
@@ -220,7 +218,7 @@ async def get_transaction_type(
 ) -> ShowTransactionType:
     try:
         transaction_type = await _get_transaction_type_by_id(transaction_type_id, db)
-    except TransactionTypeNotFound as exception:
+    except HTTPException as exception:
         raise exception
 
     return transaction_type
@@ -238,7 +236,7 @@ async def get_transactions(
             db=db, transaction_type_id=transaction_type_id,
             tag_id=tag_id, order_by=order_by
         )
-    except TransactionNotFound as exception:
+    except HTTPException as exception:
         raise exception
 
     return transactions

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Float, TIMESTAMP, ForeignKey, Integer
+from sqlalchemy import Column, String, Float, TIMESTAMP, ForeignKey, Integer, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base
 
@@ -40,6 +40,7 @@ class Credit(Base):
     name = Column(String, nullable=False)
     amount = Column(Float, nullable=False, default=1000)
     account_id = Column(UUID(as_uuid=True), ForeignKey("account.id"), nullable=False)
+    is_open = Column(Boolean, nullable=False, default=True)
 
 
 class Deposit(Base):
@@ -49,6 +50,7 @@ class Deposit(Base):
     name = Column(String, nullable=False)
     amount = Column(Float, nullable=False, default=1000)
     account_id = Column(UUID(as_uuid=True), ForeignKey("account.id"), nullable=False)
+    is_open = Column(Boolean, nullable=False, default=True)
 
 
 class TransactionType(Base):

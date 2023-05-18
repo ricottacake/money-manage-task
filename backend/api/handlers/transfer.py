@@ -75,7 +75,7 @@ async def create_transfer(
 ) -> CreatedTransferResponse:
     try:
         created_transfer_response = await _create_new_transfer(request_body, db)
-    except (AccountNotFound, HTTPException) as exception:
+    except HTTPException as exception:
         raise exception
 
     return created_transfer_response

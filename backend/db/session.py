@@ -16,14 +16,18 @@ class TransactionTypeEnum(enum.IntEnum):
     expense = 2
     money_transfer_sender = 3
     money_transfer_receiver = 4
+    credit_open = 5
+    credit_close = 6
+    deposit_open = 7
+    deposit_close = 8
 
     @property
     def is_plus_sign(self) -> bool:
-        return self.name in ("income", "money_transfer_receiver")
+        return self.name in ("income", "money_transfer_receiver", "credit_open", "deposit_close")
 
     @property
-    def is_transfer_type(self) -> bool:
-        return self.name in ("money_transfer_receiver", "money_transfer_receiver")
+    def is_reserved_type(self) -> bool:
+        return self.name not in ("income", "expense")
 
 
 CURRENCY_DATA = (
@@ -51,7 +55,7 @@ def _compare_transaction_type_enum_with_db_table(_db_session):
         if transaction_type is None:
             _db_session.add(
                 TransactionType(
-                    transaction_type_id=transaction_type_id,
+                    id=transaction_type_id,
                     name=transaction_type_name
                 )
             )
@@ -61,7 +65,7 @@ def _compare_transaction_type_enum_with_db_table(_db_session):
                 f"does not '{transaction_type_name}'!"
             )
 
-    if _db_session.query(TransactionType).count() != 4:
+    if _db_session.query(TransactionType).count() != len(TransactionTypeEnum):
         raise ValueError("Too many TransactionType rows. There should be only 4 of them!")
 
 
@@ -88,6 +92,7 @@ def db_pre_session():
     _autofill_currency_db_table(db_session)
 
     db_session.flush()
+    db_session.commit()
 
 
 async def get_db() -> Generator:

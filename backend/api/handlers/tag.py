@@ -1,7 +1,7 @@
 import uuid
 from typing import Sequence
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.tag import ShowTag, CreatedTagResponse, TagCreate
@@ -59,7 +59,7 @@ async def get_tags(db: AsyncSession = Depends(get_db)) -> Sequence[ShowTag]:
 async def get_tag(tag_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> ShowTag:
     try:
         tag = await _get_tag_by_id(tag_id, db=db)
-    except TagNotFound as exception:
+    except HTTPException as exception:
         raise exception
     return tag
 

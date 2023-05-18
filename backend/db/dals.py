@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy import select, update, delete, Row, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,8 @@ from backend.db.models import TransactionType as TrType, Transaction, \
 # DAL - Data Access Layer
 from backend.db.session import TransactionTypeEnum
 from backend.exception import AccountNotFound, TransactionTypeNotFound, TransactionNotFound, \
-    TagNotFound, CurrencyNotFound, TransferTransactionChange
+    TagNotFound, CurrencyNotFound, ReservedTransactionChange, ProjectBaseException, CreditNotFound, \
+    CreditAlreadyClosed
 
 
 class BaseDAL:
@@ -76,11 +78,11 @@ class TransactionDAL(BaseDAL):
 
     async def update_transaction(self, transaction_id: uuid.UUID, **kwargs) -> Transaction:
         transaction = await self.get_transaction_by_id(transaction_id=transaction_id)
-        if TransactionTypeEnum(transaction.transaction_type_id).is_transfer_type:
-            raise TransferTransactionChange
+        if TransactionTypeEnum(transaction.transaction_type_id).is_reserved_type:
+            raise ReservedTransactionChange
 
-        if TransactionTypeEnum(kwargs.get("transaction_type_id", 1)).is_transfer_type:
-            raise TransferTransactionChange
+        if TransactionTypeEnum(kwargs.get("transaction_type_id", 1)).is_reserved_type:
+            raise ReservedTransactionChange
 
         if "amount" not in kwargs and "transaction_type_id" not in kwargs:
             query = update(Transaction) \
@@ -127,8 +129,8 @@ class TransactionDAL(BaseDAL):
 
     async def delete_transaction(self, transaction_id: uuid.UUID) -> uuid.UUID:
         transaction = await self.get_transaction_by_id(transaction_id=transaction_id)
-        if TransactionTypeEnum(transaction.transaction_type_id).is_transfer_type:
-            raise TransferTransactionChange
+        if TransactionTypeEnum(transaction.transaction_type_id).is_reserved_type:
+            raise ReservedTransactionChange
 
         is_positive_transaction = TransactionTypeEnum(transaction.transaction_type_id).is_plus_sign
         sign = 2 * is_positive_transaction - 1
@@ -358,21 +360,40 @@ class DepositDAL(BaseDAL):
 
 class CreditDAL(BaseDAL):
     async def create_credit(
-            self, name: uuid.UUID, amount: float, account_id: uuid.UUID
-    ) -> Credit:
-        new_credit = Credit(
-            name=name,
-            amount=amount,
-            account_id=account_id
-        )
-        self.db_session.add(new_credit)
-        await self.db_session.flush()
-        return new_credit
+            self, name: str, amount: float, account_id: uuid.UUID, tag_id: uuid.UUID | None = None
+    ) -> (Credit, Transaction):
+        transaction_dal = TransactionDAL(self.db_session)
+        checkpoint = self.db_session.begin_nested()
+        try:
+            new_transaction = await transaction_dal.create_transaction(
+                transaction_type_id=TransactionTypeEnum.credit_open.value,
+                amount=amount,
+                account_id=account_id,
+                tag_id=tag_id
+            )
 
-    async def get_credit_by_id(self, credit_id: uuid.UUID) -> Credit | None:
-        return await self.db_session.get(Credit, credit_id)
+            new_credit = Credit(
+                name=name,
+                amount=amount,
+                account_id=account_id
+            )
+            self.db_session.add(new_credit)
+            await self.db_session.flush()
+        except ProjectBaseException as exception:
+            raise exception
+        except Exception as exception:
+            await checkpoint.rollback()
+            raise exception
 
-    async def update_credit(self, credit_id: uuid.UUID, **kwargs) -> Credit | None:
+        return new_credit, new_transaction
+
+    async def get_credit_by_id(self, credit_id: uuid.UUID) -> Credit:
+        credit = await self.db_session.get(Credit, credit_id)
+        if credit is None:
+            raise CreditNotFound(credit_id=credit_id)
+        return credit
+
+    async def update_credit(self, credit_id: uuid.UUID, **kwargs) -> Credit:
         query = update(Credit) \
             .where(Credit.id == credit_id) \
             .values(**kwargs) \
@@ -380,9 +401,51 @@ class CreditDAL(BaseDAL):
         query_result = await self.db_session.execute(query)
         update_credit_id_row = query_result.fetchone()
 
-        if update_credit_id_row is not None:
-            return update_credit_id_row[0]
+        if update_credit_id_row is None:
+            raise CreditNotFound(credit_id=credit_id)
+        return update_credit_id_row[0]
 
     async def delete_credit(self, credit_id: uuid.UUID) -> None:
         query = select(Credit).where(Credit.id == credit_id)
         await self.db_session.delete(query)
+
+    async def get_account_credits(self, account_id: uuid.UUID) -> Sequence[Row]:
+        query = select(Account, Credit, Currency)\
+            .filter(Account.id == account_id)\
+            .join(Credit, Credit.account_id == Account.id, isouter=True)\
+            .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
+        query_result = await self.db_session.execute(query)
+
+        return query_result.fetchall()
+
+    async def get_user_credits(self) -> Sequence[Row]:
+        query = select(Account, Credit, Currency) \
+            .join(Credit, Credit.account_id == Account.id, isouter=True) \
+            .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
+        query_result = await self.db_session.execute(query)
+
+        return query_result.fetchall()
+
+    async def close_credit(self, credit_id: uuid.UUID) -> (uuid.UUID, Transaction):
+        transaction_dal = TransactionDAL(self.db_session)
+
+        credit = await self.get_credit_by_id(credit_id=credit_id)
+
+        if not credit.is_open:
+            raise CreditAlreadyClosed(credit_id=credit_id)
+
+        query = update(Credit) \
+            .filter(Credit.id == credit_id) \
+            .values(is_open=False)
+
+        await self.db_session.execute(query)
+
+        transaction = await transaction_dal.create_transaction(
+            transaction_type_id=TransactionTypeEnum.credit_close.value,
+            amount=credit.amount,
+            account_id=credit.account_id
+        )
+
+        return credit_id, transaction
