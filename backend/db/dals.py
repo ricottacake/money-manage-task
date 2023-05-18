@@ -2,10 +2,12 @@ import uuid
 from datetime import datetime
 from typing import Sequence
 
-from sqlalchemy import select, update, delete, Row
+from sqlalchemy import select, update, delete, Row, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.models import TransactionType as TrType, Transaction, Account, Currency, Tag, Deposit, Credit
+from backend.api.schemas.transaction import OrderBy
+from backend.db.models import TransactionType as TrType, Transaction, \
+    Account, Currency, Tag, Deposit, Credit
 
 
 # DAL - Data Access Layer
@@ -157,8 +159,9 @@ class TransactionDAL(BaseDAL):
     async def get_transactions(
             self, account_id: uuid.UUID | None = None,
             transaction_type_id: int | None = None,
-            tag_id: uuid.UUID | None = None
-    ) -> Sequence[tuple[Transaction, Account, Tag, TrType, Currency]] | None:
+            tag_id: uuid.UUID | None = None,
+            order_by: OrderBy = OrderBy("id")
+    ) -> Sequence[Row] | None:
         query = select(Transaction, Account, Tag, TrType, Currency)
         if account_id is not None:
             account_dal = AccountDAL(self.db_session)
@@ -180,6 +183,11 @@ class TransactionDAL(BaseDAL):
             .join(Tag, Transaction.tag_id == Tag.id, isouter=True)\
             .join(TrType, Transaction.transaction_type_id == TrType.id, isouter=True)\
             .join(Currency, Account.currency_id == Currency.id, isouter=True)
+
+        if order_by == order_by.chronological:
+            query = query.order_by(Transaction.created_at)
+        elif order_by == order_by.reverse_chronological:
+            query = query.order_by(desc(Transaction.created_at))
 
         query_result = await self.db_session.execute(query)
         return query_result.fetchall()
@@ -241,11 +249,13 @@ class AccountDAL(BaseDAL):
             self,
             account_id: uuid.UUID,
             transaction_type_id: int | None = None,
-            tag_id: uuid.UUID | None = None
-    ) -> Sequence[tuple[Transaction, Account, Tag, TrType, Currency]]:
+            tag_id: uuid.UUID | None = None,
+            order_by: OrderBy = OrderBy("id")
+    ) -> Sequence[Row]:
         transaction_dal = TransactionDAL(self.db_session)
         return await transaction_dal.get_transactions(
-            account_id=account_id, transaction_type_id=transaction_type_id, tag_id=tag_id
+            account_id=account_id, transaction_type_id=transaction_type_id,
+            tag_id=tag_id, order_by=order_by
         )
 
     async def check_if_account_exists(self, account_id: uuid.UUID) -> None:

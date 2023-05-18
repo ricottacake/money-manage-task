@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.account import AccountCreate, ShowAccount, \
-    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse
+    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse, \
+    GetAccountTransactionsRequest
 from backend.api.schemas.currency import ShowCurrency
 from backend.api.schemas.tag import ShowTag
-from backend.api.schemas.transaction import ShowTransaction, ShowTransactionType
+from backend.api.schemas.transaction import ShowTransaction, ShowTransactionType, OrderBy
 from backend.db.dals import AccountDAL, CurrencyDAL
 from backend.db.session import get_db
 from backend.exception import AccountNotFound, TransactionTypeNotFound
@@ -85,7 +86,8 @@ async def _get_account_transactions(
         account_id: uuid.UUID,
         db,
         transaction_type_id: int | None = None,
-        tag_id: uuid.UUID | None = None
+        tag_id: uuid.UUID | None = None,
+        order_by: OrderBy = OrderBy("id")
 ) -> Sequence[ShowTransaction] | None:
     async with db as session:
         async with session.begin():
@@ -93,7 +95,8 @@ async def _get_account_transactions(
             account_transactions = await account_dal.get_account_transactions(
                 account_id=account_id,
                 transaction_type_id=transaction_type_id,
-                tag_id=tag_id
+                tag_id=tag_id,
+                order_by=order_by
             )
 
             return tuple(ShowTransaction(
@@ -180,16 +183,15 @@ async def delete_account(
 
 @router.get("/transactions/")
 async def get_account_transactions(
-        account_id: uuid.UUID, db: AsyncSession = Depends(get_db),
-        transaction_type_id: int | None = None,
-        tag_id: uuid.UUID | None = None
+        request_body: GetAccountTransactionsRequest, db: AsyncSession = Depends(get_db)
 ) -> Sequence[ShowTransaction]:
     try:
         account_transactions = await _get_account_transactions(
-            account_id=account_id,
+            account_id=request_body.account_id,
             db=db,
-            transaction_type_id=transaction_type_id,
-            tag_id=tag_id
+            transaction_type_id=request_body.transaction_type_id,
+            tag_id=request_body.tag_id,
+            order_by=request_body.order_by
         )
     except (AccountNotFound, TransactionTypeNotFound) as exception:
         raise exception

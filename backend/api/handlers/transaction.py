@@ -1,18 +1,15 @@
-import asyncio
 import uuid
 from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.handlers.account import _get_account_by_id
-from backend.api.handlers.tag import _get_tag_by_id
 from backend.api.schemas.account import ShowAccount
 from backend.api.schemas.currency import ShowCurrency
 from backend.api.schemas.tag import ShowTag
 from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, \
     UpdateTransactionRequest, UpdatedTransactionResponse, DeletedTransactionResponse, \
-    ShowTransactionType, CreatedTransactionResponse
+    ShowTransactionType, CreatedTransactionResponse, OrderBy
 from backend.db.dals import TransactionDAL, AccountDAL, TagDAL, CurrencyDAL
 from backend.db.session import get_db, TransactionTypeEnum
 from backend.exception import TransactionNotFound, TransactionTypeNotFound, TagNotFound, \
@@ -94,13 +91,15 @@ async def _get_transaction_type_by_id(transaction_type_id: int, db) -> ShowTrans
 
 
 async def _get_transactions(
-        db, transaction_type_id: int | None = None, tag_id: uuid.UUID | None = None
-                            ) -> Sequence[ShowTransaction]:
+        db, transaction_type_id: int | None = None,
+        tag_id: uuid.UUID | None = None, order_by: OrderBy = OrderBy("id")
+) -> Sequence[ShowTransaction]:
     async with db as session:
         async with session.begin():
             transaction_dal = TransactionDAL(session)
             transactions = await transaction_dal.get_transactions(
-                transaction_type_id=transaction_type_id, tag_id=tag_id
+                transaction_type_id=transaction_type_id,
+                tag_id=tag_id, order_by=order_by
             )
 
         return tuple(ShowTransaction(
@@ -231,11 +230,13 @@ async def get_transaction_type(
 async def get_transactions(
         db: AsyncSession = Depends(get_db),
         transaction_type_id: int | None = None,
-        tag_id: uuid.UUID | None = None
+        tag_id: uuid.UUID | None = None,
+        order_by: OrderBy = OrderBy("id")
 ):
     try:
         transactions = await _get_transactions(
-            db=db, transaction_type_id=transaction_type_id, tag_id=tag_id
+            db=db, transaction_type_id=transaction_type_id,
+            tag_id=tag_id, order_by=order_by
         )
     except TransactionNotFound as exception:
         raise exception
