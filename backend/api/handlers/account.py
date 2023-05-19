@@ -5,14 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas.account import AccountCreate, ShowAccount, \
-    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse, \
-    GetAccountTransactionsRequest
+    UpdateAccountRequest, UpdatedAccountResponse, DeletedAccountResponse, CreatedAccountResponse
 from backend.api.schemas.currency import ShowCurrency
 from backend.api.schemas.tag import ShowTag
 from backend.api.schemas.transaction import ShowTransaction, ShowTransactionType, OrderBy
 from backend.db.dals import AccountDAL, CurrencyDAL
 from backend.db.session import get_db
-from backend.exception import AccountNotFound, TransactionTypeNotFound
 
 
 router = APIRouter(
@@ -183,15 +181,17 @@ async def delete_account(
 
 @router.get("/transactions/")
 async def get_account_transactions(
-        request_body: GetAccountTransactionsRequest, db: AsyncSession = Depends(get_db)
+        account_id: uuid.UUID, db: AsyncSession = Depends(get_db), order_by:
+        OrderBy = OrderBy("id"), tag_id: uuid.UUID | None = None,
+        transaction_type_id: int | None = None
 ) -> Sequence[ShowTransaction]:
     try:
         account_transactions = await _get_account_transactions(
-            account_id=request_body.account_id,
+            account_id=account_id,
             db=db,
-            transaction_type_id=request_body.transaction_type_id,
-            tag_id=request_body.tag_id,
-            order_by=request_body.order_by
+            transaction_type_id=transaction_type_id,
+            tag_id=tag_id,
+            order_by=order_by
         )
     except HTTPException as exception:
         raise exception

@@ -146,7 +146,8 @@ async def create_deposit(
 
 @router.patch("/", response_model=UpdatedDepositResponse)
 async def update_deposit(
-        deposit_id: uuid.UUID, request_body: UpdateDepositRequest, db: AsyncSession = Depends(get_db)
+        deposit_id: uuid.UUID, request_body: UpdateDepositRequest,
+        db: AsyncSession = Depends(get_db)
 ) -> UpdatedDepositResponse:
     updated_deposit_response = await _update_deposit(
         deposit_id=deposit_id, request_body=request_body, db=db

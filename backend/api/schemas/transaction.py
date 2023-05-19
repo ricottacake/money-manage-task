@@ -43,12 +43,6 @@ class UpdateTransactionRequest(BaseModel):
     tag_id: uuid.UUID | None
 
 
-class GetTransactionsRequest(BaseModel):
-    transaction_type_id: int | None
-    tag_id: uuid.UUID | None
-    order_by: OrderBy
-
-
 class UpdatedTransactionResponse(BaseModel):
     updated_transaction_id: uuid.UUID
 

@@ -4,16 +4,16 @@ from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.api.schemas import OrderBy
 from backend.api.schemas.account import ShowAccount
 from backend.api.schemas.currency import ShowCurrency
 from backend.api.schemas.tag import ShowTag
 from backend.api.schemas.transaction import TransactionCreate, ShowTransaction, \
     UpdateTransactionRequest, UpdatedTransactionResponse, DeletedTransactionResponse, \
-    ShowTransactionType, CreatedTransactionResponse, OrderBy
+    ShowTransactionType, CreatedTransactionResponse
 from backend.db.dals import TransactionDAL, AccountDAL, TagDAL, CurrencyDAL
 from backend.db.session import get_db, TransactionTypeEnum
-from backend.exception import TransactionNotFound, TransactionTypeNotFound, TagNotFound, \
-    AccountNotFound, ProjectBaseException
+from backend.exception import TransactionTypeNotFound
 
 router = APIRouter(
     prefix="/transaction"

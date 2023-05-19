@@ -5,7 +5,6 @@ import requests
 from backend.api.schemas.transfer import TransferCreate, CreatedTransferResponse
 from backend.db.dals import TransactionDAL, AccountDAL, CurrencyDAL
 from backend.db.session import get_db, TransactionTypeEnum
-from backend.exception import AccountNotFound
 from config import EXCHANGE_RATE_API_URL, EXCHANGE_RATE_API_KEY
 
 

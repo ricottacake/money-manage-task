@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.schemas.tag import ShowTag, CreatedTagResponse, TagCreate
 from backend.db.dals import TagDAL
 from backend.db.session import get_db
-from backend.exception import TagNotFound
+
 
 router = APIRouter(
     prefix="/tag"
