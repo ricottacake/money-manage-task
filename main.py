@@ -5,13 +5,12 @@ if __name__ == "__main__":
     from pathlib import Path
 
     import uvicorn
-    import os
 
     sys.path.append(str(Path(__file__).parent))
 
     uvicorn.run(
         "app:create_app",
         host="0.0.0.0",
-        port= os.environ.get("$PORT"),
+        port= 8000,
         reload=True
     )
