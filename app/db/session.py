@@ -101,4 +101,4 @@ async def get_db() -> Generator:
     finally:
         await session.close()
 
-await db_pre_session()
+db_pre_session()
