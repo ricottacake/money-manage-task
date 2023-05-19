@@ -1,10 +1,11 @@
-import uvicorn
-import os
+
+
 if __name__ == "__main__":
     import sys
     from pathlib import Path
 
     import uvicorn
+    import os
 
     sys.path.append(str(Path(__file__).parent))
 
