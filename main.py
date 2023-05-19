@@ -12,6 +12,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app:create_app",
         host="0.0.0.0",
-        port= os.environ.get("PORT"),
+        port= os.environ.get("$PORT"),
         reload=True
     )
