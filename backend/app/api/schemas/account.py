@@ -3,8 +3,8 @@ from datetime import datetime
 
 from pydantic import Field
 
-from backend.api.schemas import BaseModel, TunedModel
-from backend.api.schemas.currency import ShowCurrency
+from app.api.schemas import BaseModel, TunedModel
+from app.api.schemas.currency import ShowCurrency
 
 
 class ShowAccount(TunedModel):

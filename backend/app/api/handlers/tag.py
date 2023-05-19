@@ -4,9 +4,9 @@ from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas.tag import ShowTag, CreatedTagResponse, TagCreate
-from backend.db.dals import TagDAL
-from backend.db.session import get_db
+from app.api.schemas.tag import ShowTag, CreatedTagResponse, TagCreate
+from app.db.dals import TagDAL
+from app.db.session import get_db
 
 
 router = APIRouter(

@@ -2,7 +2,7 @@ import uuid
 
 from pydantic import Field
 
-from backend.api.schemas import BaseModel
+from app.api.schemas import BaseModel
 
 
 class TransferCreate(BaseModel):

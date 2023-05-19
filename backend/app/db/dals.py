@@ -6,14 +6,14 @@ from fastapi import HTTPException
 from sqlalchemy import select, update, delete, Row, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas.transaction import OrderBy
-from backend.db.models import TransactionType as TrType, Transaction, \
+from app.api.schemas.transaction import OrderBy
+from app.db.models import TransactionType as TrType, Transaction, \
     Account, Currency, Tag, Deposit, Credit
 
 
 # DAL - Data Access Layer
-from backend.db.session import TransactionTypeEnum
-from backend.exception import AccountNotFound, TransactionTypeNotFound, TransactionNotFound, \
+from app.db.session import TransactionTypeEnum
+from app.exception import AccountNotFound, TransactionTypeNotFound, TransactionNotFound, \
     TagNotFound, CurrencyNotFound, ReservedTransactionChange, ProjectBaseException, CreditNotFound, \
     CreditAlreadyClosed, DepositNotFound, NotEnoughMoney
 

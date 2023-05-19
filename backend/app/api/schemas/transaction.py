@@ -3,9 +3,9 @@ from datetime import datetime
 
 from pydantic import Field
 
-from backend.api.schemas import BaseModel, TunedModel, OrderBy
-from backend.api.schemas.account import ShowAccount
-from backend.api.schemas.tag import ShowTag
+from app.api.schemas import BaseModel, TunedModel, OrderBy
+from app.api.schemas.account import ShowAccount
+from app.api.schemas.tag import ShowTag
 
 
 class ShowTransactionType(TunedModel):

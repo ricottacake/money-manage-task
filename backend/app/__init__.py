@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter
 
-from backend.api.handlers import router
+from app.api.handlers import router
 
 
 ROUTERS: tuple[APIRouter] = (router,)

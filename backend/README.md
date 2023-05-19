@@ -24,7 +24,7 @@ To include these variables, insert the following block of code into the 'migrati
 `import sys`
 `from pathlib import Path`
 `sys.path.append(Path(__file__).parent.parent.parent.__str__())`
-`from backend.db.models import Base`
+`from app.db.models import Base`
 `target_metadata = Base.metadata`
 
 4. run these commands in the terminal:

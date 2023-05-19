@@ -1,4 +1,4 @@
-from backend.api.schemas import BaseModel, TunedModel
+from app.api.schemas import BaseModel, TunedModel
 
 
 class ShowCurrency(TunedModel):

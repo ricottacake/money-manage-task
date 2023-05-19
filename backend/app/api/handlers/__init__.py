@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.api.handlers import transaction, account, user, tag, transfer, credit, deposit
+from app.api.handlers import transaction, account, user, tag, transfer, credit, deposit
 
 
 router = APIRouter(

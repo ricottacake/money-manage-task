@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 import requests
 
-from backend.api.schemas.transfer import TransferCreate, CreatedTransferResponse
-from backend.db.dals import TransactionDAL, AccountDAL, CurrencyDAL
-from backend.db.session import get_db, TransactionTypeEnum
+from app.api.schemas.transfer import TransferCreate, CreatedTransferResponse
+from app.db.dals import TransactionDAL, AccountDAL, CurrencyDAL
+from app.db.session import get_db, TransactionTypeEnum
 from config import EXCHANGE_RATE_API_URL, EXCHANGE_RATE_API_KEY
 
 

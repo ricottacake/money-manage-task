@@ -3,13 +3,13 @@ from typing import Sequence
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas.account import ShowAccount
-from backend.api.schemas.credit import ShowCredit
-from backend.api.schemas.currency import ShowCurrency
-from backend.api.schemas.deposit import ShowDeposit
-from backend.db.dals import UserDAL, CreditDAL
-from backend.db.models import Deposit
-from backend.db.session import get_db
+from app.api.schemas.account import ShowAccount
+from app.api.schemas.credit import ShowCredit
+from app.api.schemas.currency import ShowCurrency
+from app.api.schemas.deposit import ShowDeposit
+from app.db.dals import UserDAL, CreditDAL
+from app.db.models import Deposit
+from app.db.session import get_db
 
 router = APIRouter(
     prefix=""

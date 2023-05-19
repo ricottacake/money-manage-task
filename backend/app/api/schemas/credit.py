@@ -2,8 +2,8 @@ import uuid
 
 from pydantic import Field
 
-from backend.api.schemas import BaseModel, TunedModel
-from backend.api.schemas.account import ShowAccount
+from app.api.schemas import BaseModel, TunedModel
+from app.api.schemas.account import ShowAccount
 
 
 class ShowCredit(TunedModel):

@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   db:
-    container_name: "db"
+    container_name: db-pg
     image: postgres:14.1-alpine
     environment:
       - POSTGRES_USER=postgres
@@ -11,3 +11,13 @@ services:
     ports:
       - "5432:5432"
     restart: always
+
+  core_api:
+    build: backend
+    container_name: core-api-container
+    external_links:
+      - db-pg:db-pg
+    ports:
+      - "8080:8000"
+    depends_on:
+      - db

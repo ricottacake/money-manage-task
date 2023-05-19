@@ -1,8 +1,8 @@
 import enum
 from collections.abc import Generator
-from enum import Enum
 
 from fastapi import Depends
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, create_session
 from sqlalchemy import create_engine
@@ -38,7 +38,6 @@ CURRENCY_DATA = (
 db_url = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_async_engine(db_url, future=True, echo=True)
 
-
 async_session = sessionmaker(
     engine,
     class_=AsyncSession,
@@ -46,14 +45,14 @@ async_session = sessionmaker(
 )
 
 
-def _compare_transaction_type_enum_with_db_table(_db_session):
-    from backend.db.models import TransactionType
+async def _compare_transaction_type_enum_with_db_table(_db_session):
+    from app.db.models import TransactionType
 
     for transaction_type in TransactionTypeEnum:
         transaction_type_name, transaction_type_id = transaction_type.name, transaction_type.value
-        transaction_type = _db_session.get(TransactionType, transaction_type_id)
+        transaction_type = await _db_session.get(TransactionType, transaction_type_id)
         if transaction_type is None:
-            _db_session.add(
+            await _db_session.add(
                 TransactionType(
                     id=transaction_type_id,
                     name=transaction_type_name
@@ -65,34 +64,34 @@ def _compare_transaction_type_enum_with_db_table(_db_session):
                 f"does not '{transaction_type_name}'!"
             )
 
-    if _db_session.query(TransactionType).count() != len(TransactionTypeEnum):
-        raise ValueError("Too many TransactionType rows. There should be only 4 of them!")
+    await _db_session.flush()
+
+    if await _db_session.query(TransactionType).count() != len(TransactionTypeEnum):
+        raise ValueError(f"Too many TransactionType rows. "
+                         f"There should be only {len(TransactionTypeEnum)} of them!")
 
 
-def _autofill_currency_db_table(_db_session):
-    from backend.db.models import Currency
+async def _autofill_currency_db_table(_db_session):
+    from app.db.models import Currency
 
     for currency_data in CURRENCY_DATA:
-        currency = _db_session.get(Currency, currency_data["id"])
+        currency = await _db_session.get(Currency, currency_data["id"])
         if currency is None:
-            _db_session.add(Currency(**currency_data))
+            await _db_session.add(Currency(**currency_data))
         elif currency.name != currency_data["name"]:
             raise ValueError(
                 "Currency with id {id} does not '{name}'!".format(**currency_data)
             )
 
 
-def db_pre_session():
-    sync_db_url = db_url[:10] + db_url[18:]
-    sync_engine = create_engine(sync_db_url)
+async def db_pre_session():
+    async with Depends(get_db) as session:
+        async with session.begin() as db_session:
+            await _compare_transaction_type_enum_with_db_table(db_session)
+            await _autofill_currency_db_table(db_session)
 
-    db_session = create_session(sync_engine)
-
-    _compare_transaction_type_enum_with_db_table(db_session)
-    _autofill_currency_db_table(db_session)
-
-    db_session.flush()
-    db_session.commit()
+            await db_session.flush()
+            await db_session.commit()
 
 
 async def get_db() -> Generator:
@@ -102,4 +101,4 @@ async def get_db() -> Generator:
     finally:
         await session.close()
 
-db_pre_session()
+await db_pre_session()

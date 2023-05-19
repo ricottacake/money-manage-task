@@ -4,12 +4,12 @@ from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas.account import ShowAccount
-from backend.api.schemas.credit import CreateCreditRequest, CreatedCreditResponse, ShowCredit, \
+from app.api.schemas.account import ShowAccount
+from app.api.schemas.credit import CreateCreditRequest, CreatedCreditResponse, ShowCredit, \
     ClosedCreditResponse, CloseCreditRequest, UpdateCreditRequest, UpdatedCreditResponse
-from backend.api.schemas.currency import ShowCurrency
-from backend.db.dals import CreditDAL, AccountDAL, CurrencyDAL
-from backend.db.session import get_db
+from app.api.schemas.currency import ShowCurrency
+from app.db.dals import CreditDAL, AccountDAL, CurrencyDAL
+from app.db.session import get_db
 
 
 router = APIRouter(
